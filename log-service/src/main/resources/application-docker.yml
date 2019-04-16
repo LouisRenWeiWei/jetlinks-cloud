@@ -1,0 +1,13 @@
+jetlinks:
+  redis:
+    clients:
+      default:  #默认client
+        hosts: redis://redis:6379
+        database: 0
+  influx:
+    clients:
+      default:
+        url: http://influxdb:8086/
+        username: jetlinks
+        password: jetlinks
+        database: jetlinks

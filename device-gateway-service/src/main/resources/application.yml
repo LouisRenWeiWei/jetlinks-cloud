@@ -25,6 +25,16 @@ spring:
     name: @artifactId@
   profiles:
     active: dev
+  cloud:
+    stream:
+      default:
+        group: ${spring.application.name}
+        consumer:
+          header-mode: raw
+          content-type: application/json
+        producer:
+          header-mode: raw
+          content-type: application/json
 hsweb:
   app:
     name: 设备网关服务

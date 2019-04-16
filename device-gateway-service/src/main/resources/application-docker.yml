@@ -7,3 +7,8 @@ jetlinks:
       device-registry:  #设备注册中心,使用redis数据库2
         hosts: redis://redis:6379
         database: 2
+spring:
+  rabbitmq:
+    addresses: rabbitmq:5672
+    password: jetlinks
+    username: jetlinks

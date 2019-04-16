@@ -15,6 +15,7 @@
         <module>logging-component</module>
         <module>service-dependencies</module>
         <module>redis-component</module>
+        <module>influx-component</module>
     </modules>
 
 

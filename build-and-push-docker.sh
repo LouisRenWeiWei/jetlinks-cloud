@@ -17,6 +17,6 @@ fi
 echo "构建服务:$servers"
 echo "docker仓库:$repo"
 
-./mvnw -pl common-components,common-components/logging-component,common-components/redis-component,common-components/service-dependencies -am clean install -DskipTests
+./mvnw -pl common-components,influx-component/influx-component,common-components/logging-component,common-components/redis-component,common-components/service-dependencies -am clean install -DskipTests
 
 ./mvnw -Dgit-commit-id=$(git rev-parse HEAD) -pl "$servers" clean package docker:removeImage docker:build -DpushImage -DskipTests -Ddocker.image.baseName="$repo"

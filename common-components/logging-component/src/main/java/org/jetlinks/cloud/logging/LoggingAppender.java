@@ -29,14 +29,6 @@ public class LoggingAppender extends UnsynchronizedAppenderBase<ILoggingEvent> {
 
     static String appName = "default";
 
-    @Setter
-    @Getter
-    private String commitId = "unknown";
-
-    @Setter
-    @Getter
-    private String mavenModule = "unknown";
-
     static void setPublisher(ApplicationEventPublisher publisher) {
         LoggingAppender.publisher = publisher;
     }

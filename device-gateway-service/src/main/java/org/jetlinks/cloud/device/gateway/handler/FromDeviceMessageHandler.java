@@ -18,15 +18,21 @@ import org.jetlinks.protocol.message.function.FunctionInvokeMessageReply;
 import org.jetlinks.protocol.message.property.ReadPropertyMessageReply;
 import org.jetlinks.protocol.message.property.WritePropertyMessageReply;
 import org.jetlinks.protocol.metadata.FunctionMetadata;
+import org.jetlinks.protocol.metadata.Jsonable;
 import org.jetlinks.registry.api.DeviceMessageHandler;
 import org.jetlinks.protocol.device.DeviceOperation;
 import org.jetlinks.registry.api.DeviceRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cloud.stream.annotation.EnableBinding;
+import org.springframework.cloud.stream.binding.BinderAwareChannelResolver;
 import org.springframework.context.event.EventListener;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -44,6 +50,7 @@ import static org.jetlinks.cloud.DeviceConfigKey.*;
  **/
 @Component
 @Slf4j
+@EnableBinding
 public class FromDeviceMessageHandler {
 
     @Autowired
@@ -55,9 +62,12 @@ public class FromDeviceMessageHandler {
     @Autowired
     private DeviceSessionManager sessionManager;
 
+    @Autowired
+    private BinderAwareChannelResolver resolver;
+
     protected Object newConnectData(String deviceId) {
         JSONObject object = new JSONObject();
-        object.put("clientId", deviceId);
+        object.put("deviceId", deviceId);
         object.put("timestamp", System.currentTimeMillis());
         return object;
     }
@@ -171,8 +181,8 @@ public class FromDeviceMessageHandler {
         if (!topics.isEmpty()) {
             Object message = messageSupplier.get();
             String json;
-            if (message instanceof DeviceMessage) {
-                json = ((DeviceMessage) message).toJson().toJSONString();
+            if (message instanceof Jsonable) {
+                json = ((Jsonable) message).toJson().toJSONString();
             } else if (message instanceof String) {
                 json = ((String) message);
             } else {
@@ -185,6 +195,10 @@ public class FromDeviceMessageHandler {
 
     private void sendMessageToMq(List<String> topics, String json) {
         log.info("发送消息到MQ,topics:{}\n{}", topics, json);
-        // FIXME: 19-3-20 发送消息到消息队列
+        for (String topic : topics) {
+            resolver.resolveDestination(topic)
+                    .send(MessageBuilder.withPayload(json)
+                            .build());
+        }
     }
 }

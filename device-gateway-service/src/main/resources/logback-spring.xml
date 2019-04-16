@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <configuration>
-    <appender name="LOGEventPublisher" class="org.jetlinks.cloud.logging.LoggingAppender">
-        <mavenModule>@project.artifactId@</mavenModule>
-        <commitId>@git-commit-id@</commitId>
-    </appender>
+    <appender name="LOGEventPublisher" class="org.jetlinks.cloud.logging.LoggingAppender" />
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
     <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
 

@@ -45,6 +45,12 @@
 
         <dependency>
             <groupId>org.jetlinks</groupId>
+            <artifactId>logging-component</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jetlinks</groupId>
             <artifactId>service-dependencies</artifactId>
             <version>${project.version}</version>
         </dependency>
