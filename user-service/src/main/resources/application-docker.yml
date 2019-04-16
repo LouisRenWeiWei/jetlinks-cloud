@@ -1,0 +1,6 @@
+jetlinks:
+  redis:
+    clients:
+      default:  #默认client
+        hosts: redis://redis:6379
+        database: 0

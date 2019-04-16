@@ -1,0 +1,47 @@
+server:
+  port: 9012
+logging:
+  level:
+    business: TRACE
+spring:
+  aop:
+    proxy-target-class: true
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    filters: stat
+    max-active: 1000
+    initial-size: 5
+    min-idle: 5
+    max-wait: 50000
+    min-evictable-idle-time-millis: 300000
+    test-while-idle: true
+    test-on-borrow: false
+    test-on-return: false
+    pool-prepared-statements: false
+    validation-query: select 1
+    time-between-eviction-runs-millis: 60000
+    max-open-prepared-statements: 2000
+  application:
+    name: @artifactId@
+  profiles:
+    active: dev
+hsweb:
+  app:
+    name: 用户服务
+    version: 1.0.0
+feign:
+  hystrix:
+    enabled: false
+ribbon:
+  ReadTimeout: 100000
+  ConnectTimeout: 2000
+  MaxAutoRetries: 3
+  MaxAutoRetriesNextServer: 1
+jetlinks:
+  redis:
+    user-token:
+      enable: true
+    clients:
+      default:  #默认client
+        hosts: redis://127.0.0.1:6379
+        database: 0
