@@ -1,0 +1,11 @@
+spring:
+  cloud:
+    nacos:
+      config:
+        server-addr: nacos-server:8848
+        file-extension: yml
+        shared-dataids: common-config.yml
+        refreshable-dataids: @artifactId@.yml
+      discovery:
+        endpoint: @artifactId@
+        server-addr: nacos-server:8848

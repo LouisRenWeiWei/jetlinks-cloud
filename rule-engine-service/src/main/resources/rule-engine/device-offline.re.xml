@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<rule id="device-offline-handler:1.0" runMode="DISTRIBUTED" name="设备下线处理" xmlns="http://www.jetlinls.org/RuleEngine"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.jetlinls.org/RuleEngine">
+
+    <node id="start" executor="cloud-stream" start="true" nodeType="PEEK" name="启动，消费队列">
+        <configuration>
+            <topic>device.disconnect</topic>
+            <type>Consumer</type>
+        </configuration>
+
+        <outputs>
+            <output id="influxdb" target="write-influxdb"/>
+        </outputs>
+    </node>
+
+    <node id="write-influxdb" executor="influx-write" nodeType="PEEK" name="数据写入到influxdb">
+        <configuration>
+            <url>http://127.0.0.1:8086/</url>
+            <username>jetlinks</username>
+            <password>jetlinks</password>
+            <database>jetlinks</database>
+            <convertsJson>
+                [
+                {
+                "measurement":"offline",
+                "timeField":"timestamp",
+                "filedMapping":{
+                "deviceId":"${#deviceId}"
+                }
+                }
+                ]
+            </convertsJson>
+        </configuration>
+    </node>
+</rule>
