@@ -70,4 +70,4 @@ vertx:
       password: jetlinks
 
 gateway:
-  server-id: ${spring.application.name}
+  server-id: ${spring.application.name}:${server.port}
