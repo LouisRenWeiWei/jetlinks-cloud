@@ -39,7 +39,7 @@ public class DeviceOperationController {
 
         ReadPropertyMessageReply reply = registry.getDevice(deviceId)
                 .messageSender()
-                .readProperty(deviceId, name)
+                .readProperty(name)
                 .sendAsync()
                 .toCompletableFuture()
                 .get(10, TimeUnit.SECONDS);
@@ -54,7 +54,7 @@ public class DeviceOperationController {
         FunctionInvokeMessageReply reply = registry
                 .getDevice(deviceId)
                 .messageSender()
-                .invokeFunction(deviceId, id)
+                .invokeFunction(id)
                 .setParameter(input)
                 .messageId(IDGenerator.MD5.generate())
                 .sendAsync()
