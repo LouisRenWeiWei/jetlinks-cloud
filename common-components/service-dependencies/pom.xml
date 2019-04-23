@@ -130,13 +130,13 @@
         </dependency>
 
         <dependency>
-            <groupId>org.jetlinks</groupId>
+            <groupId>org.jetlinks.cloud</groupId>
             <artifactId>redis-component</artifactId>
             <version>${project.version}</version>
         </dependency>
 
         <dependency>
-            <groupId>org.jetlinks</groupId>
+            <groupId>org.jetlinks.cloud</groupId>
             <artifactId>logging-component</artifactId>
             <version>${project.version}</version>
         </dependency>

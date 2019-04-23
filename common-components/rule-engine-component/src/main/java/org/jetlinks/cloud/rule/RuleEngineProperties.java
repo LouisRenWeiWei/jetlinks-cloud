@@ -4,7 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import org.jetlinks.rule.engine.api.cluster.NodeInfo;
-import org.jetlinks.rule.engine.api.cluster.NodeRule;
+import org.jetlinks.rule.engine.api.cluster.NodeRole;
 import org.springframework.core.env.Environment;
 import org.springframework.util.Assert;
 
@@ -23,13 +23,13 @@ public class RuleEngineProperties {
 
     private String name = "default";
 
-    private NodeRule[] rules = {NodeRule.WORKER, NodeRule.SCHEDULER, NodeRule.MONITOR};
+    private NodeRole[] rules = {NodeRole.WORKER, NodeRole.SCHEDULER, NodeRole.MONITOR};
 
     private String[] tags;
 
     private String redisName = "rule-engine";
 
-    public boolean hasRule(NodeRule rule) {
+    public boolean hasRule(NodeRole rule) {
         return rule.in(rules);
     }
 
