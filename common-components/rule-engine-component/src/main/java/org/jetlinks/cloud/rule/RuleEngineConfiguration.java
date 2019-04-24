@@ -27,12 +27,13 @@ import org.jetlinks.rule.engine.executor.ExecutableRuleNodeFactoryStrategy;
 import org.jetlinks.rule.engine.model.DefaultRuleModelParser;
 import org.jetlinks.rule.engine.model.RuleModelParserStrategy;
 import org.jetlinks.rule.engine.model.xml.XmlRuleModelParserStrategy;
-import org.jetlinks.rule.engine.standalone.StandaloneRuleEngine;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.ApplicationEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
@@ -193,18 +194,18 @@ public class RuleEngineConfiguration {
                                              RuleEngineModelParser modelParser,
                                              RuleRepository ruleRepository,
                                              ConditionEvaluator conditionEvaluator,
+                                             ApplicationEventPublisher eventPublisher,
                                              ExecutableRuleNodeFactory ruleNodeFactory) {
-        StandaloneRuleEngine ruleEngine = new StandaloneRuleEngine();
-        ruleEngine.setNodeFactory(ruleNodeFactory);
-        ruleEngine.setEvaluator(conditionEvaluator);
-        RuleEngineWorker engine = new RuleEngineWorker();
-        engine.setClusterManager(clusterManager);
-        engine.setRuleRepository(ruleRepository);
-        engine.setModelParser(modelParser);
-        engine.setStandaloneRuleEngine(ruleEngine);
-        engine.setNodeFactory(ruleNodeFactory);
-        engine.setConditionEvaluator(conditionEvaluator);
-        return engine;
+        RuleEngineWorker worker = new RuleEngineWorker();
+        worker.setClusterManager(clusterManager);
+        worker.setRuleRepository(ruleRepository);
+        worker.setModelParser(modelParser);
+        worker.setNodeFactory(ruleNodeFactory);
+        worker.setConditionEvaluator(conditionEvaluator);
+        worker.setExecuteEventConsumer(eventPublisher::publishEvent);
+        worker.setExecuteLogEventConsumer(eventPublisher::publishEvent);
+
+        return worker;
     }
 
 }
