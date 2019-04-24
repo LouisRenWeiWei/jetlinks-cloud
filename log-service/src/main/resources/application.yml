@@ -38,6 +38,12 @@ spring:
         producer:
           header-mode: raw
           content-type: application/json
+  elasticsearch:
+    jest:
+      uris: http://localhost:9200
+      read-timeout: 10000
+      username:
+      password:
 hsweb:
   app:
     name: 日志服务
