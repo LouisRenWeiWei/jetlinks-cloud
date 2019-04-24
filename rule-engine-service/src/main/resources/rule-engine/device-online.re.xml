@@ -3,14 +3,16 @@
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:schemaLocation="http://www.jetlinls.org/RuleEngine">
 
+    <!--启动时监听-->
     <node id="start" executor="cloud-stream" start="true" nodeType="PEEK" name="启动，消费队列">
         <configuration>
-            <topic>device.connect</topic>
             <type>Consumer</type>
+            <topic>device.connect</topic>
         </configuration>
 
         <outputs>
             <output id="influxdb" target="write-influxdb"/>
+            <output id="got-to-write-es" target="write-es"/>
             <output id="go-to-read-device-property" target="read-device-property"/>
         </outputs>
     </node>
@@ -24,6 +26,7 @@
                 <property>version</property>
             </properties>
         </configuration>
+
         <outputs>
             <output id="go-write-property-db" target="write-property-db">
                 <condition type="script">
@@ -33,11 +36,10 @@
                     </script>
                 </condition>
             </output>
-
         </outputs>
     </node>
 
-    <node id="write-property-db" executor="java-method" nodeType="PEEK" name="记录数据库">
+    <node id="write-property-db" executor="java-method" end="true" nodeType="PEEK" name="记录数据库">
         <configuration>
             <className>org.jetlinks.cloud.rule.engine.TestWorker</className>
             <methodName>updateDeviceProperty</methodName>
@@ -45,6 +47,17 @@
                 <parameter>deviceId</parameter>
                 <parameter>properties</parameter>
             </parameters>
+        </configuration>
+    </node>
+
+    <node id="write-es" executor="elasticsearch" nodeType="PEEK" name="记录到ES">
+        <configuration>
+            <uris type="list">
+                <uri>http://localhost:9200</uri>
+            </uris>
+            <!--<id>id</id>-->
+            <index>jetlinks-device-connect</index>
+            <type>device-connect</type>
         </configuration>
     </node>
 

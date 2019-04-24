@@ -32,6 +32,28 @@ services:
       POSTGRES_PASSWORD: jetlinks
       POSTGRES_DB: jetlinks
       TZ: Asia/Shanghai
+  elasticsearch:
+    image: elasticsearch:5.6.11
+    container_name: jetlinks-es
+    environment:
+      ES_JAVA_OPTS: -Djava.net.preferIPv4Stack=true -Xms1g -Xmx1g
+      transport.host: 0.0.0.0
+      discovery.zen.minimum_master_nodes: 1
+      discovery.zen.ping.unicast.hosts: elasticsearch
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+  kibana:
+    image: kibana:5.6.11
+    container_name: jetlinks-kibana
+    environment:
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+    links:
+      - elasticsearch:elasticsearch
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
   influxdb:
     image: influxdb:1.7
     container_name: jetlinks-influxdb
