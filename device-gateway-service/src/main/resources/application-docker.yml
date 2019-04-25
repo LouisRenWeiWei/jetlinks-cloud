@@ -4,7 +4,7 @@ jetlinks:
       default:  #默认client
         hosts: redis://redis:6379
         database: 0
-      device-registry:  #设备注册中心,使用redis数据库2
+      device-registry:  #设备注册中心,使用redis数据库1
         hosts: redis://redis:6379
         database: 1
 spring:

@@ -4,6 +4,9 @@ jetlinks:
       default:  #默认client
         hosts: redis://redis:6379
         database: 0
+      device-registry:  #设备注册中心,使用redis数据库1
+        hosts: redis://redis:6379
+        database: 1
   influx:
     clients:
       default:
@@ -11,3 +14,14 @@ jetlinks:
         username: jetlinks
         password: jetlinks
         database: jetlinks
+spring:
+  rabbitmq:
+    addresses: rabbitmq:5672
+    password: jetlinks
+    username: jetlinks
+  elasticsearch:
+    jest:
+      uris: http://elasticsearch:9200
+      read-timeout: 10000
+      username:
+      password:

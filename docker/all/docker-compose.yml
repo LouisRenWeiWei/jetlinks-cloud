@@ -18,11 +18,58 @@ services:
     volumes:
       - "./data/redis:/data"
     command: redis-server --appendonly yes
+  elasticsearch:
+    image: elasticsearch:5.6.11
+    container_name: jetlinks-elasticsearch
+    environment:
+      ES_JAVA_OPTS: -Djava.net.preferIPv4Stack=true
+      transport.host: 0.0.0.0
+      discovery.zen.minimum_master_nodes: 1
+      discovery.zen.ping.unicast.hosts: elasticsearch
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+  kibana:
+    image: kibana:5.6.11
+    container_name: jetlinks-kibana
+    environment:
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+    links:
+      - elasticsearch:elasticsearch
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+  influxdb:
+    image: influxdb:1.7
+    container_name: jetlinks-influxdb
+    volumes:
+      - "./data/influxdb:/var/lib/influxdb"
+    environment:
+      INFLUXDB_ADMIN_ENABLED: "true"
+      INFLUXDB_DB: jetlinks
+      INFLUXDB_ADMIN_USER: jetlinks
+      INFLUXDB_ADMIN_PASSWORD: jetlinks
+      INFLUXDB_HTTP_AUTH_ENABLED: "false"
+      TZ: Asia/Shanghai
+    ports:
+      - "8086:8086"
+      - "8083:8083"
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: jetlinks-rabbitmq
+    environment:
+      RABBITMQ_ERLANG_COOKIE: jetlinks
+      RABBITMQ_DEFAULT_USER: jetlinks
+      RABBITMQ_DEFAULT_PASS: jetlinks
+      TZ: Asia/Shanghai
+    ports:
+      - "15672:15672"
+      - "5672:5672"
   jetlinsk-gateway:
     image: jetlinks/device-gateway-service
     container_name: device-gateway-service
     ports:
-      - "9012:9012"
       - "1883:1883"
     environment:
       server.port: 9012
@@ -30,5 +77,50 @@ services:
     links:
       - redis:redis
       - nacos:nacos-server
+      - rabbitmq:rabbitmq
     depends_on:
       - redis
+      - nacos
+  log-service:
+    image: jetlinks/log-service
+    container_name: log-service
+    environment:
+      spring.profiles.active: dev,docker
+    links:
+      - redis:redis
+      - nacos:nacos-server
+      - rabbitmq:rabbitmq
+      - influxdb:influxdb
+      - elasticsearch:elasticsearch
+    depends_on:
+      - redis
+      - nacos
+      - influxdb
+  rule-engine-service:
+    image: jetlinks/rule-engine-service
+    container_name: rule-engine-service
+    environment:
+      spring.profiles.active: dev,docker
+    links:
+      - redis:redis
+      - nacos:nacos-server
+      - rabbitmq:rabbitmq
+      - influxdb:influxdb
+    depends_on:
+      - redis
+      - nacos
+      - influxdb
+  dashbord-gateway:
+    image: jetlinks/dashboard-gateway-service
+    container_name: dashboard-gateway-service
+    ports:
+      - "8000:8000"
+    environment:
+      spring.profiles.active: dev,docker
+    links:
+      - nacos:nacos-server
+      - jetlinsk-gateway:jetlinsk-gateway
+      - log-service:log-service
+      - rule-engine-service:rule-engine-service
+    depends_on:
+      - nacos
