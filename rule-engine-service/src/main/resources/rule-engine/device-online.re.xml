@@ -11,7 +11,41 @@
 
         <outputs>
             <output id="influxdb" target="write-influxdb"/>
+            <output id="go-to-read-device-property" target="read-device-property"/>
         </outputs>
+    </node>
+
+    <node id="read-device-property" executor="send-device-message" nodeType="MAP" name="读取设备的属性">
+        <configuration>
+            <deviceId>deviceId</deviceId>
+            <messageType>readProperty</messageType>
+            <properties type="list">
+                <property>name</property>
+                <property>version</property>
+            </properties>
+        </configuration>
+        <outputs>
+            <output id="go-write-property-db" target="write-property-db">
+                <condition type="script">
+                    <lang>js</lang>
+                    <script>
+                        return data.success===true;
+                    </script>
+                </condition>
+            </output>
+
+        </outputs>
+    </node>
+
+    <node id="write-property-db" executor="java-method" nodeType="PEEK" name="记录数据库">
+        <configuration>
+            <className>org.jetlinks.cloud.rule.engine.TestWorker</className>
+            <methodName>updateDeviceProperty</methodName>
+            <parameters type="list">
+                <parameter>deviceId</parameter>
+                <parameter>properties</parameter>
+            </parameters>
+        </configuration>
     </node>
 
     <node id="write-influxdb" executor="influx-write" nodeType="PEEK" name="数据写入到influxdb">
@@ -20,17 +54,15 @@
             <username>jetlinks</username>
             <password>jetlinks</password>
             <database>jetlinks</database>
-            <convertsJson>
-                [
-                {
-                "measurement":"online",
-                "timeField":"timestamp",
-                "filedMapping":{
-                "deviceId":"${#deviceId}"
-                }
-                }
-                ]
-            </convertsJson>
+            <converts type="list">
+                <convert>
+                    <measurement>online</measurement>
+                    <timeField>timestamp</timeField>
+                    <filedMapping>
+                        <deviceId>${#deviceId}</deviceId>
+                    </filedMapping>
+                </convert>
+            </converts>
         </configuration>
     </node>
 </rule>

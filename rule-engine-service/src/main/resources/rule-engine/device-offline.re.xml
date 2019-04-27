@@ -20,17 +20,15 @@
             <username>jetlinks</username>
             <password>jetlinks</password>
             <database>jetlinks</database>
-            <convertsJson>
-                [
-                {
-                "measurement":"offline",
-                "timeField":"timestamp",
-                "filedMapping":{
-                "deviceId":"${#deviceId}"
-                }
-                }
-                ]
-            </convertsJson>
+            <converts type="list">
+                <convert>
+                    <measurement>offline</measurement>
+                    <timeField>timestamp</timeField>
+                    <filedMapping>
+                        <deviceId>${#deviceId}</deviceId>
+                    </filedMapping>
+                </convert>
+            </converts>
         </configuration>
     </node>
 </rule>

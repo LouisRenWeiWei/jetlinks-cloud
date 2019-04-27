@@ -17,7 +17,7 @@ public class RedissonProperties {
 
     private String password;
 
-    private int connectionPoolSize = 128;
+    private int connectionPoolSize = 1024;
 
     private int connectionTimeout = 10000;
 

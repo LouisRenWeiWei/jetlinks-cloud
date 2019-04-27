@@ -55,7 +55,7 @@ public class InfluxDBWorkerNode extends AbstractExecutableRuleNodeFactoryStrateg
             CompletableFuture<Object> future = new CompletableFuture<>();
             try {
                 influxDB.write(config.parsePoint(context, data));
-                future.complete(data);
+                future.complete(data.getData());
             } catch (Throwable e) {
                 future.completeExceptionally(e);
             }
@@ -136,6 +136,8 @@ public class InfluxDBWorkerNode extends AbstractExecutableRuleNodeFactoryStrateg
 
         private List<PointConvert> converts = new ArrayList<>();
 
+        private NodeType nodeType;
+
         public InfluxDB newInfluxDB() {
             Assert.hasText(url, "url");
             Assert.hasText(username, "username");
@@ -162,14 +164,5 @@ public class InfluxDBWorkerNode extends AbstractExecutableRuleNodeFactoryStrateg
             return points.build();
         }
 
-        @Override
-        public NodeType getNodeType() {
-            return NodeType.PEEK;
-        }
-
-        @Override
-        public void setNodeType(NodeType nodeType) {
-
-        }
     }
 }

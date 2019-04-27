@@ -130,13 +130,13 @@
         </dependency>
 
         <dependency>
-            <groupId>org.jetlinks</groupId>
+            <groupId>org.jetlinks.cloud</groupId>
             <artifactId>redis-component</artifactId>
             <version>${project.version}</version>
         </dependency>
 
         <dependency>
-            <groupId>org.jetlinks</groupId>
+            <groupId>org.jetlinks.cloud</groupId>
             <artifactId>logging-component</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -145,10 +145,12 @@
             <groupId>org.aspectj</groupId>
             <artifactId>aspectjweaver</artifactId>
         </dependency>
+
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-aspects</artifactId>
         </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-aop</artifactId>

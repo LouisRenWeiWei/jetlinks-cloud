@@ -6,7 +6,7 @@ jetlinks:
         database: 0
       device-registry:  #设备注册中心,使用redis数据库2
         hosts: redis://redis:6379
-        database: 2
+        database: 1
 spring:
   rabbitmq:
     addresses: rabbitmq:5672

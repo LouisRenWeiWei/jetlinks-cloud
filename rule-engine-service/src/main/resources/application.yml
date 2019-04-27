@@ -62,6 +62,9 @@ jetlinks:
       default:  #默认client
         hosts: redis://127.0.0.1:6379
         database: 0
-      rule-engine:
+      device-registry: # 设备注册中心
+        hosts: redis://127.0.0.1:6379
+        database: 1
+      rule-engine:  # 规则引擎
         hosts: redis://127.0.0.1:6379
         database: 2
