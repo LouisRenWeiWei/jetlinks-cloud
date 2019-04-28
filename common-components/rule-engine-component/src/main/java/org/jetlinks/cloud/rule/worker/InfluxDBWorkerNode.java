@@ -1,7 +1,6 @@
 package org.jetlinks.cloud.rule.worker;
 
 import com.alibaba.fastjson.JSON;
-import io.netty.util.concurrent.CompleteFuture;
 import lombok.Getter;
 import lombok.Setter;
 import org.hswebframework.utils.StringUtils;
@@ -71,7 +70,7 @@ public class InfluxDBWorkerNode extends AbstractExecutableRuleNodeFactoryStrateg
 
         private String timeField = "now";
 
-        private Map<String, String> filedMapping = new HashMap<>();
+        private Map<String, String> fieldMapping = new HashMap<>();
 
         public void validate() {
             Assert.hasText(measurement, "measurement");
@@ -96,7 +95,7 @@ public class InfluxDBWorkerNode extends AbstractExecutableRuleNodeFactoryStrateg
             Point.Builder builder = Point.measurement(measurement)
                     .time(time, TimeUnit.MILLISECONDS)
                     .addField("dataId", ruleData.getId());
-            for (Map.Entry<String, String> entry : filedMapping.entrySet()) {
+            for (Map.Entry<String, String> entry : fieldMapping.entrySet()) {
                 String val = entry.getValue();
                 try {
                     val = ExpressionUtils.analytical(entry.getValue(), expressionContext, "spel");

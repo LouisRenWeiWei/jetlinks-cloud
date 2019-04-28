@@ -71,9 +71,9 @@
                 <convert>
                     <measurement>online</measurement>
                     <timeField>timestamp</timeField>
-                    <filedMapping>
+                    <fieldMapping>
                         <deviceId>${#deviceId}</deviceId>
-                    </filedMapping>
+                    </fieldMapping>
                 </convert>
             </converts>
         </configuration>
