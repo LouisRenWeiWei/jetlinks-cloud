@@ -35,7 +35,7 @@ public class DeviceGatewayServiceApplication {
     public static class RegistryDevice implements CommandLineRunner {
 
         @Autowired
-        DeviceRegistry registry;
+        private DeviceRegistry registry;
 
         @Getter
         @Setter

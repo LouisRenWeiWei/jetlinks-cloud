@@ -18,43 +18,6 @@ services:
     volumes:
       - "./data/redis:/data"
     command: redis-server --appendonly yes
-  elasticsearch:
-    image: elasticsearch:5.6.11
-    container_name: jetlinks-elasticsearch
-    environment:
-      ES_JAVA_OPTS: -Djava.net.preferIPv4Stack=true
-      transport.host: 0.0.0.0
-      discovery.zen.minimum_master_nodes: 1
-      discovery.zen.ping.unicast.hosts: elasticsearch
-    ports:
-      - "9200:9200"
-      - "9300:9300"
-  kibana:
-    image: kibana:5.6.11
-    container_name: jetlinks-kibana
-    environment:
-      ELASTICSEARCH_URL: http://elasticsearch:9200
-    links:
-      - elasticsearch:elasticsearch
-    ports:
-      - "5601:5601"
-    depends_on:
-      - elasticsearch
-  influxdb:
-    image: influxdb:1.7
-    container_name: jetlinks-influxdb
-    volumes:
-      - "./data/influxdb:/var/lib/influxdb"
-    environment:
-      INFLUXDB_ADMIN_ENABLED: "true"
-      INFLUXDB_DB: jetlinks
-      INFLUXDB_ADMIN_USER: jetlinks
-      INFLUXDB_ADMIN_PASSWORD: jetlinks
-      INFLUXDB_HTTP_AUTH_ENABLED: "false"
-      TZ: Asia/Shanghai
-    ports:
-      - "8086:8086"
-      - "8083:8083"
   rabbitmq:
     image: rabbitmq:3-management
     container_name: jetlinks-rabbitmq
@@ -74,6 +37,7 @@ services:
     environment:
       server.port: 9012
       spring.profiles.active: dev,docker
+      test.initDeviceNumber: 100000
     links:
       - redis:redis
       - nacos:nacos-server
@@ -96,20 +60,20 @@ services:
       - redis
       - nacos
       - influxdb
-  rule-engine-service:
-    image: jetlinks/rule-engine-service
-    container_name: rule-engine-service
-    environment:
-      spring.profiles.active: dev,docker
-    links:
-      - redis:redis
-      - nacos:nacos-server
-      - rabbitmq:rabbitmq
-      - influxdb:influxdb
-    depends_on:
-      - redis
-      - nacos
-      - influxdb
+#  rule-engine-service:
+#    image: jetlinks/rule-engine-service
+#    container_name: rule-engine-service
+#    environment:
+#      spring.profiles.active: dev,docker
+#    links:
+#      - redis:redis
+#      - nacos:nacos-server
+#      - rabbitmq:rabbitmq
+#      - influxdb:influxdb
+#    depends_on:
+#      - redis
+#      - nacos
+#      - influxdb
   dashbord-gateway:
     image: jetlinks/dashboard-gateway-service
     container_name: dashboard-gateway-service

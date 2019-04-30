@@ -22,7 +22,7 @@ spring:
   profiles:
     active: dev
   application:
-    name: dashboard-zuul-gateway
+    name: @artifactId@
   datasource:
     url: jdbc:h2:file:./db/${spring.application.name}
     username: sa

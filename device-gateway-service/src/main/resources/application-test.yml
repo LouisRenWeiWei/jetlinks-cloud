@@ -1,0 +1,14 @@
+jetlinks:
+  redis:
+    clients:
+      default:  #默认client
+        hosts: redis://192.168.1.84:6379
+        database: 0
+      device-registry:  #设备注册中心,使用redis数据库1
+        hosts: redis://192.168.1.84:6379
+        database: 1
+spring:
+  rabbitmq:
+    addresses: 192.168.1.84:5672
+    password: jetlinks
+    username: jetlinks
