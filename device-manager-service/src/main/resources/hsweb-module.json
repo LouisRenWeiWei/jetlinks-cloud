@@ -1,0 +1,8 @@
+{
+  "groupId": "@groupId@",
+  "artifactId": "@artifactId@",
+  "path": "@artifactId@",
+  "gitCommitHash": "@git-commit-id@",
+  "gitRepository": "https://github.com/jetlinks/jetlinks-cloud",
+  "version": "@version@"
+}

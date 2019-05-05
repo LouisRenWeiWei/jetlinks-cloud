@@ -1,0 +1,14 @@
+spring:
+  datasource:
+    url: jdbc:h2:file:./db/${spring.application.name}
+    username: sa
+    password:
+  rabbitmq:
+    addresses: 127.0.0.1:5672
+    password: jetlinks
+    username: jetlinks
+logging:
+  level:
+    org.hswebframework.web: DEBUG
+    org.hswebframework.web.cache: WARN
+    org.jetlinks: DEBUG

@@ -1,0 +1,73 @@
+server:
+  port: -1
+logging:
+  level:
+    business: TRACE
+    org.hswebframework.web: DEBUG
+    org.hswebframework.web.cache: WARN
+    org.jetlinks: DEBUG
+  stream:
+    producer:
+      enabled: false
+spring:
+  aop:
+    proxy-target-class: true
+  datasource:
+    url: jdbc:h2:mem:/${spring.application.name}
+    username: sa
+    password:
+    type: com.alibaba.druid.pool.DruidDataSource
+    filters: stat
+    max-active: 1000
+    initial-size: 5
+    min-idle: 5
+    max-wait: 50000
+    min-evictable-idle-time-millis: 300000
+    test-while-idle: true
+    test-on-borrow: false
+    test-on-return: false
+    pool-prepared-statements: false
+    validation-query: select 1
+    time-between-eviction-runs-millis: 60000
+    max-open-prepared-statements: 2000
+  application:
+    name: @artifactId@
+  cloud:
+    stream:
+      default:
+        group: ${spring.application.name}
+        consumer:
+          header-mode: raw
+          content-type: application/json
+        producer:
+          header-mode: raw
+          content-type: application/json
+      default-binder: test
+  rabbitmq:
+    addresses: 127.0.0.1:5672
+    password: jetlinks
+    username: jetlinks
+hsweb:
+  app:
+    name: 设备管理服务
+    version: 1.0.0
+feign:
+  hystrix:
+    enabled: false
+ribbon:
+  ReadTimeout: 100000
+  ConnectTimeout: 2000
+  MaxAutoRetries: 3
+  MaxAutoRetriesNextServer: 1
+jetlinks:
+  redis:
+    clients:
+      default:  #默认client
+        hosts: redis://127.0.0.1:6379
+        database: 0
+      device-registry:  #设备注册中心,使用redis数据库1
+        hosts: redis://127.0.0.1:6379
+        database: 1
+mybatis:
+  mapper-locations: classpath*:org/jetlinks/cloud/**/mappers/*.xml
+  type-aliases-package: org.jetlinks.cloud.device.manager.enums
