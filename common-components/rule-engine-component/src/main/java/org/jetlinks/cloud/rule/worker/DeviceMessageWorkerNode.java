@@ -6,7 +6,6 @@ import lombok.SneakyThrows;
 import org.hswebframework.web.ExpressionUtils;
 import org.jetlinks.protocol.device.DeviceOperation;
 import org.jetlinks.protocol.message.DeviceMessageReply;
-import org.jetlinks.protocol.message.function.FunctionParameter;
 import org.jetlinks.registry.api.DeviceRegistry;
 import org.jetlinks.rule.engine.api.RuleData;
 import org.jetlinks.rule.engine.api.executor.ExecutionContext;
@@ -106,7 +105,7 @@ public class DeviceMessageWorkerNode extends AbstractExecutableRuleNodeFactorySt
                 return operation.messageSender()
                         .invokeFunction(config.getFunction())
                         .setParameter(ruleData)
-                        .sendAsync();
+                        .send();
             }
         }, readProperty {
             @Override
@@ -114,7 +113,7 @@ public class DeviceMessageWorkerNode extends AbstractExecutableRuleNodeFactorySt
                 return operation.messageSender()
                         .readProperty()
                         .read(config.getProperties())
-                        .sendAsync();
+                        .send();
             }
         };
 
