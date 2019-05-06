@@ -60,5 +60,5 @@ jetlinks:
         hosts: redis://127.0.0.1:6379
         database: 1
 mybatis:
-  mapper-locations: classpath:org/jetlink/cloud/**/mappers/*.xml
+  mapper-locations: classpath:org/jetlinks/cloud/**/mappers/*.xml
   type-aliases-package: org.jetlinks.cloud.device.manager.enums

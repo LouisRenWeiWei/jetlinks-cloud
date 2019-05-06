@@ -1,8 +1,10 @@
 package org.jetlinks.cloud.device.manager.event
 
+import com.alibaba.fastjson.JSON
 import org.jetlinks.cloud.device.manager.TestApplication
 import org.jetlinks.cloud.device.manager.entity.DeviceInstanceEntity
 import org.jetlinks.cloud.device.manager.enums.DeviceFeature
+import org.jetlinks.cloud.device.manager.event.dispacher.DeviceOnlineOfflineConsumer
 import org.jetlinks.cloud.device.manager.service.LocalDeviceInstanceService
 import org.jetlinks.protocol.device.DeviceState
 import org.jetlinks.registry.api.DeviceRegistry
@@ -28,14 +30,17 @@ class DeviceStateChangeHandlerTest extends Specification {
     private LocalDeviceInstanceService instanceService;
 
     @Autowired
+    private DeviceOnlineOfflineConsumer consumer;
+
+    @Autowired
     private DeviceRegistry registry;
 
     def "测试消费设备上下线消息"() {
-        given:
+        given: "注册新设备"
         instanceService.insert(new DeviceInstanceEntity(
                 id: "test", name: "测试设备",
-                creatorId: "test",createTime: System.currentTimeMillis(), creatorName: "test",
-                productId: "test",prodcutName: "test",
+                creatorId: "test", createTime: System.currentTimeMillis(), creatorName: "test",
+                productId: "test", prodcutName: "test",
                 state: DeviceState.noActive
         ))
         def operation = registry.getDevice("test");
@@ -45,15 +50,17 @@ class DeviceStateChangeHandlerTest extends Specification {
         when:
         operation != null
         operation.getDeviceInfo() != null
-        then:
-        operation.online("test","test")
-        messageCollector.forChannel(resolver.resolveDestination("device.connect"))
-                .put(MessageBuilder.withPayload(["deviceId": "test"]).build())
+        then: "修改设备状态并发送消息到MQ"
+
+        operation.online("test", "test")
+
+        consumer.deviceOnline()
+                .send(MessageBuilder.withPayload(JSON.toJSONString(["deviceId": "test"])).build());
 
         def instance = instanceService.selectByPk("test")
-        expect:
-        instance!=null
-        instance.getState()== DeviceState.online
+        expect: "设备状态成功修改"
+        instance != null
+        instance.getState() == DeviceState.online
     }
 
 }

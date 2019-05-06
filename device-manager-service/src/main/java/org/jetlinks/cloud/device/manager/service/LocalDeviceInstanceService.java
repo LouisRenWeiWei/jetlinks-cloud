@@ -62,30 +62,39 @@ public class LocalDeviceInstanceService extends GenericEntityService<DeviceInsta
      * @return 同步成功数量
      */
     public int syncState(List<String> deviceId, boolean force) {
-        Map<Byte, List<String>> group = new HashMap<>();
-
-        for (String device : deviceId) {
-            DeviceOperation operation = registry.getDevice(device);
-            if (force) {
-                //检查真实状态
-                operation.checkState();
-            }
-            group.computeIfAbsent(operation.getState(), k -> new ArrayList<>())
-                    .add(device);
-        }
         int total = 0;
-        //批量更新分组结果
-        for (Map.Entry<Byte, List<String>> entry : group.entrySet()) {
-            byte state = entry.getKey();
-            List<String> deviceIdList = entry.getValue();
-            if (!CollectionUtils.isEmpty(deviceIdList)) {
-                continue;
+        try {
+            Map<Byte, Set<String>> group = new HashMap<>();
+            for (String device : deviceId) {
+                DeviceOperation operation = registry.getDevice(device);
+                if (force) {
+                    //检查真实状态
+                    operation.checkState();
+                }
+                group.computeIfAbsent(operation.getState(), k -> new HashSet<>())
+                        .add(device);
             }
-            total += createUpdate()
-                    .where()
-                    .set(DeviceInstanceEntity::getState, state)
-                    .in(DeviceInstanceEntity::getId, deviceIdList)
-                    .exec();
+            if (logger.isDebugEnabled()) {
+                for (Map.Entry<Byte, Set<String>> entry : group.entrySet()) {
+                    logger.debug("同步设备状态:{} 数量: {}", entry.getKey(), entry.getValue().size());
+                }
+            }
+
+            //批量更新分组结果
+            for (Map.Entry<Byte, Set<String>> entry : group.entrySet()) {
+                byte state = entry.getKey();
+                Set<String> deviceIdList = entry.getValue();
+                if (CollectionUtils.isEmpty(deviceIdList)) {
+                    continue;
+                }
+                total += createUpdate()
+                        .where()
+                        .set(DeviceInstanceEntity::getState, state)
+                        .in(DeviceInstanceEntity::getId, deviceIdList)
+                        .exec();
+            }
+        } catch (Exception e) {
+            logger.error("同步设备状态失败:\n{}", deviceId);
         }
         return total;
     }
