@@ -1,4 +1,4 @@
-package org.jetlinks.cloud.device.manager.event.dispacher;
+package org.jetlinks.cloud.device.manager.event.dispatcher;
 
 import org.jetlinks.cloud.device.manager.event.DeviceOnlineOfflineEvent;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,13 +16,13 @@ public class DeviceOnlineOfflineDispatcher {
 
     @StreamListener(DeviceOnlineOfflineConsumer.deviceOnline)
     public void handleDeviceOnline(DeviceOnlineOfflineEvent event) {
-        event.setOffline(true);
+        event.setOffline(false);
         eventPublisher.publishEvent(event);
     }
 
     @StreamListener(DeviceOnlineOfflineConsumer.deviceOffline)
     public void handleDeviceOffline(DeviceOnlineOfflineEvent event) {
-        event.setOffline(false);
+        event.setOffline(true);
         eventPublisher.publishEvent(event);
     }
 

@@ -1,6 +1,5 @@
 package org.jetlinks.cloud.device.manager.event;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 

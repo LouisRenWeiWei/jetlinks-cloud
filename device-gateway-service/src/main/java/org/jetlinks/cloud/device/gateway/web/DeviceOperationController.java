@@ -6,13 +6,11 @@ import org.hswebframework.web.id.IDGenerator;
 import org.jetlinks.protocol.message.DeviceMessageReply;
 import org.jetlinks.protocol.message.function.FunctionInvokeMessageReply;
 import org.jetlinks.protocol.message.function.FunctionParameter;
-import org.jetlinks.protocol.message.property.ReadPropertyMessage;
 import org.jetlinks.protocol.message.property.ReadPropertyMessageReply;
 import org.jetlinks.registry.api.DeviceRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -40,7 +38,7 @@ public class DeviceOperationController {
         ReadPropertyMessageReply reply = registry.getDevice(deviceId)
                 .messageSender()
                 .readProperty(name)
-                .sendAsync()
+                .send()
                 .toCompletableFuture()
                 .get(10, TimeUnit.SECONDS);
         return ResponseMessage.ok(reply);
@@ -57,7 +55,7 @@ public class DeviceOperationController {
                 .invokeFunction(id)
                 .setParameter(input)
                 .messageId(IDGenerator.MD5.generate())
-                .sendAsync()
+                .send()
                 .toCompletableFuture()
                 .get(10, TimeUnit.SECONDS);
         return ResponseMessage.ok(reply);

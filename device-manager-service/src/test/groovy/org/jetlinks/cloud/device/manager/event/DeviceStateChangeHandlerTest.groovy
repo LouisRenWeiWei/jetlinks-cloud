@@ -4,7 +4,7 @@ import com.alibaba.fastjson.JSON
 import org.jetlinks.cloud.device.manager.TestApplication
 import org.jetlinks.cloud.device.manager.entity.DeviceInstanceEntity
 import org.jetlinks.cloud.device.manager.enums.DeviceFeature
-import org.jetlinks.cloud.device.manager.event.dispacher.DeviceOnlineOfflineConsumer
+import org.jetlinks.cloud.device.manager.event.dispatcher.DeviceOnlineOfflineConsumer
 import org.jetlinks.cloud.device.manager.service.LocalDeviceInstanceService
 import org.jetlinks.protocol.device.DeviceState
 import org.jetlinks.registry.api.DeviceRegistry

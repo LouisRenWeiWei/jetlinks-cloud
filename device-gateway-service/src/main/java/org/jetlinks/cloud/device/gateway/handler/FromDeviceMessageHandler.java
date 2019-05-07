@@ -5,12 +5,12 @@ import com.alibaba.fastjson.JSONObject;
 import lombok.extern.slf4j.Slf4j;
 import org.jetlinks.cloud.device.gateway.events.ChildDeviceOfflineEvent;
 import org.jetlinks.cloud.device.gateway.events.ChildDeviceOnlineEvent;
-import org.jetlinks.cloud.device.gateway.events.DeviceOnlineEvent;
 import org.jetlinks.cloud.device.gateway.events.DeviceOfflineEvent;
+import org.jetlinks.cloud.device.gateway.events.DeviceOnlineEvent;
 import org.jetlinks.cloud.device.gateway.vertx.DeviceMessageEvent;
 import org.jetlinks.gateway.session.DeviceSession;
 import org.jetlinks.gateway.session.DeviceSessionManager;
-import org.jetlinks.protocol.message.DeviceMessage;
+import org.jetlinks.protocol.device.DeviceOperation;
 import org.jetlinks.protocol.message.event.ChildDeviceOfflineMessage;
 import org.jetlinks.protocol.message.event.ChildDeviceOnlineMessage;
 import org.jetlinks.protocol.message.event.EventMessage;
@@ -20,7 +20,6 @@ import org.jetlinks.protocol.message.property.WritePropertyMessageReply;
 import org.jetlinks.protocol.metadata.FunctionMetadata;
 import org.jetlinks.protocol.metadata.Jsonable;
 import org.jetlinks.registry.api.DeviceMessageHandler;
-import org.jetlinks.protocol.device.DeviceOperation;
 import org.jetlinks.registry.api.DeviceRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.stream.annotation.EnableBinding;
@@ -28,11 +27,9 @@ import org.springframework.cloud.stream.binding.BinderAwareChannelResolver;
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Component;
-import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -198,7 +195,7 @@ public class FromDeviceMessageHandler {
 
 
     private void sendMessageToMq(List<String> topics, String json) {
-        log.info("发送消息到MQ,topics:{}\n{}", topics, json);
+        log.info("发送消息到MQ,topics:{} <= {}", topics, json);
         for (String topic : topics) {
             resolver.resolveDestination(topic)
                     .send(MessageBuilder.withPayload(json)

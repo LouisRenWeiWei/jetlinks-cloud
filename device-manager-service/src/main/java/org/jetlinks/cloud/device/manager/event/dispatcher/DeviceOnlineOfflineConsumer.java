@@ -1,4 +1,4 @@
-package org.jetlinks.cloud.device.manager.event.dispacher;
+package org.jetlinks.cloud.device.manager.event.dispatcher;
 
 import org.springframework.cloud.stream.annotation.Input;
 import org.springframework.messaging.SubscribableChannel;
