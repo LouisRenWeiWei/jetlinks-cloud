@@ -14,7 +14,9 @@ if [ "$servers" = "all" ];then
 servers=device-gateway-service\
 ,rule-engine-service\
 ,log-service\
-,dashboard-gateway-service
+,dashboard-gateway-service\
+,user-service\
+,device-manager-service
 fi
 
 echo "构建服务:$servers"
@@ -28,4 +30,4 @@ echo "docker仓库:$repo"
 ,common-components/rule-engine-component \
 -am clean install -DskipTests
 
-./mvnw -Dgit-commit-id=$(git rev-parse HEAD) -pl "$servers" clean package docker:removeImage docker:build -DskipTests -Ddocker.image.baseName="$repo"
+./mvnw -Dgit-commit-id=$(git rev-parse HEAD) -pl "$servers" clean package docker:build -DskipTests -Ddocker.image.baseName="$repo"

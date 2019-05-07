@@ -126,19 +126,27 @@
             <plugin>
                 <groupId>com.spotify</groupId>
                 <artifactId>docker-maven-plugin</artifactId>
-                <version>0.4.13</version>
+                <version>1.2.0</version>
                 <configuration>
                     <imageName>jetlinks/${project.artifactId}</imageName>
                     <imageTags>
                         <imageTag>${project.version}</imageTag>
                     </imageTags>
-                    <baseImage>java:8</baseImage>
+                    <baseImage>openjdk:8</baseImage>
                     <workdir>/</workdir>
                     <env>
                         <TZ>Asia/Shanghai</TZ>
+                        <APP_JAR>/${project.build.finalName}.jar</APP_JAR>
                     </env>
-                    <entryPoint>["java","-jar","-server","-XX:+UseG1GC","/${project.build.finalName}.jar"]</entryPoint>
+                    <entryPoint>["/docker-entrypoint.sh"]</entryPoint>
+                    <!--<entryPoint>["java","-jar -server -XX:+UseG1GC $JAVA_OPTS /${project.build.finalName}.jar"]</entryPoint>-->
+                    <!--<entryPoint>java -jar $JAVA_OPTS -server -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap -XX:-OmitStackTraceInFastThrow -Djava.security.egd=file:/dev/./urandom /${project.build.finalName}.jar</entryPoint>-->
                     <resources>
+                        <resource>
+                            <targetPath>/</targetPath>
+                            <directory>${project.basedir}</directory>
+                            <include>docker-entrypoint.sh</include>
+                        </resource>
                         <resource>
                             <targetPath>/</targetPath>
                             <directory>${project.build.directory}</directory>
