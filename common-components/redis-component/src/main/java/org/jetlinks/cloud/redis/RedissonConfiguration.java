@@ -5,10 +5,8 @@ import org.hswebframework.web.authorization.token.SimpleUserToken;
 import org.hswebframework.web.authorization.token.UserToken;
 import org.hswebframework.web.authorization.token.UserTokenManager;
 import org.jetlinks.protocol.ProtocolSupports;
-import org.jetlinks.registry.api.DeviceMonitor;
 import org.jetlinks.registry.api.DeviceRegistry;
 import org.jetlinks.registry.redis.RedissonDeviceMessageHandler;
-import org.jetlinks.registry.redis.RedissonDeviceMonitor;
 import org.jetlinks.registry.redis.RedissonDeviceRegistry;
 import org.nustaq.serialization.FSTConfiguration;
 import org.redisson.api.LocalCachedMapOptions;
@@ -27,12 +25,8 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.transaction.TransactionAwareCacheManagerProxy;
-import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Scope;
-import org.springframework.context.annotation.ScopedProxyMode;
-import org.springframework.core.annotation.Order;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -128,11 +122,6 @@ public class RedissonConfiguration {
         };
     }
 
-    @Bean
-    public DeviceMonitor deviceMonitor(RedissonClientRepository repository) {
-        return new RedissonDeviceMonitor(repository.getClient("device-registry")
-                .orElseGet(repository::getDefaultClient));
-    }
 
     @Bean(destroyMethod = "close")
     public RedissonDeviceMessageHandler deviceMessageHandler(RedissonClientRepository repository, ExecutorService executorService) {

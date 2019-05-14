@@ -9,10 +9,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.jetlinks.cloud.device.gateway.events.DeviceOnlineEvent;
 import org.jetlinks.cloud.device.gateway.events.DeviceOfflineEvent;
 import org.jetlinks.cloud.device.gateway.vertx.VerticleSupplier;
+import org.jetlinks.cloud.redis.RedissonClientRepository;
+import org.jetlinks.gateway.monitor.GatewayServerMonitor;
+import org.jetlinks.gateway.monitor.RedissonGatewayServerMonitor;
 import org.jetlinks.gateway.session.DefaultDeviceSessionManager;
 import org.jetlinks.protocol.ProtocolSupports;
 import org.jetlinks.registry.api.DeviceMessageHandler;
-import org.jetlinks.registry.api.DeviceMonitor;
 import org.jetlinks.registry.api.DeviceRegistry;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,13 +56,23 @@ public class DeviceGatewayConfiguration {
         return Vertx.vertx(vertxOptions);
     }
 
+
+    @Bean
+    public RedissonGatewayServerMonitor deviceMonitor(Environment environment,
+                                                      ScheduledExecutorService executorService,
+                                                      RedissonClientRepository repository) {
+        return new RedissonGatewayServerMonitor(environment.getProperty("gateway.server-id"),
+                repository.getClient("device-registry")
+                        .orElseGet(repository::getDefaultClient),executorService);
+    }
+
     @Bean(initMethod = "init", destroyMethod = "shutdown")
     @Order(Ordered.HIGHEST_PRECEDENCE)
     public DefaultDeviceSessionManager deviceSessionManager(Environment environment,
                                                             ProtocolSupports protocolSupports,
                                                             DeviceRegistry registry,
                                                             DeviceMessageHandler deviceMessageHandler,
-                                                            DeviceMonitor deviceMonitor,
+                                                            GatewayServerMonitor gatewayServerMonitor,
                                                             ApplicationEventPublisher eventPublisher,
                                                             ScheduledExecutorService executorService) {
         DefaultDeviceSessionManager sessionManager = new DefaultDeviceSessionManager();
@@ -68,7 +80,7 @@ public class DeviceGatewayConfiguration {
         sessionManager.setProtocolSupports(protocolSupports);
         sessionManager.setDeviceRegistry(registry);
         sessionManager.setExecutorService(executorService);
-        sessionManager.setDeviceMonitor(deviceMonitor);
+        sessionManager.setGatewayServerMonitor(gatewayServerMonitor);
         sessionManager.setDeviceMessageHandler(deviceMessageHandler);
         sessionManager.setOnDeviceRegister(session -> eventPublisher.publishEvent(new DeviceOnlineEvent(session, System.currentTimeMillis())));
         sessionManager.setOnDeviceUnRegister(session -> eventPublisher.publishEvent(new DeviceOfflineEvent(session, System.currentTimeMillis() + 100)));
@@ -101,7 +113,7 @@ public class DeviceGatewayConfiguration {
                 options.setInstances(supplier.getInstances());
                 vertx.deployVerticle(supplier, options, e -> {
                     if (!e.succeeded()) {
-                        log.error("deploy verticle :{} error", supplier, e.succeeded(), e.cause());
+                        log.error("deploy verticle :{} error", supplier, e.cause());
                     } else {
                         log.debug("deploy verticle :{} success", supplier);
                     }
