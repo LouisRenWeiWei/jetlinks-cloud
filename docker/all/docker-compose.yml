@@ -30,11 +30,13 @@ services:
       POSTGRES_DB: jetlinks
       TZ: Asia/Shanghai
   elasticsearch:
-    image: elasticsearch:5.6.11
+    image: elasticsearch:6.7.2
     container_name: jetlinks-all-elasticsearch
     environment:
       ES_JAVA_OPTS: -Djava.net.preferIPv4Stack=true -Xms1g -Xmx1g
       transport.host: 0.0.0.0
+      discovery.type: single-node
+      bootstrap.memory_lock: "true"
       discovery.zen.minimum_master_nodes: 1
       discovery.zen.ping.unicast.hosts: elasticsearch
     volumes:
@@ -43,7 +45,7 @@ services:
       - "9200:9200"
       - "9300:9300"
   kibana:
-    image: kibana:5.6.11
+    image: kibana:6.7.2
     container_name: jetlinks-all-kibana
     environment:
       ELASTICSEARCH_URL: http://elasticsearch:9200
