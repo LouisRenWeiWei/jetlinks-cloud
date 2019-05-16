@@ -19,10 +19,18 @@ import org.springframework.cloud.stream.binding.BindingService;
 import org.springframework.messaging.*;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
@@ -51,6 +59,10 @@ public class CloudStreamWorkerNode extends AbstractExecutableRuleNodeFactoryStra
         return "cloud-stream";
     }
 
+    protected Map<Integer, Map<Integer, Consumer<Object>>> allConsumer = new ConcurrentHashMap<>();
+
+    protected Map<Integer, MessageHandler> handlerMap = new ConcurrentHashMap<>();
+
     @Override
     public Function<RuleData, CompletionStage<Object>> createExecutor(ExecutionContext context, Config config) {
 
@@ -72,9 +84,65 @@ public class CloudStreamWorkerNode extends AbstractExecutableRuleNodeFactoryStra
         return payload;
     }
 
+    private void addListener(String topic, SubscribableChannel channel, Consumer<Object> consumer) {
+        AtomicReference<Boolean> first = new AtomicReference<>(false);
+
+        int hash = System.identityHashCode(channel);
+        allConsumer.computeIfAbsent(hash, $ -> {
+            first.set(true);
+            return new LinkedHashMap<>();
+        }).put(System.identityHashCode(consumer), consumer);
+
+        if (first.get()) {
+            MessageHandler handler = msg -> {
+                Map<Integer, Consumer<Object>> consumers = allConsumer.get(hash);
+                if (!CollectionUtils.isEmpty(consumers)) {
+                    boolean allFail = true;
+                    Throwable lastError = null;
+                    for (Consumer<Object> c : consumers.values()) {
+                        try {
+                            c.accept(convertPayload(msg.getPayload()));
+                            allFail = false;
+                        } catch (Throwable e) {
+                            lastError = e;
+                            log.error(e.getMessage(), e);
+                        }
+                    }
+                    if (allFail && lastError != null) {
+                        throw new RuntimeException(lastError);
+                    }
+                }
+            };
+            handlerMap.put(hash, handler);
+            channel.subscribe(handler);
+            bindingService.bindConsumer(channel, topic);
+        }
+
+    }
+
+
+    private void removeListener(String topic, SubscribableChannel channel, Consumer<Object> consumer) {
+        int hash = System.identityHashCode(channel);
+        int consumerHash = System.identityHashCode(consumer);
+        log.debug("remove [{}] listener :[{}]", topic, consumerHash);
+        Map<Integer, Consumer<Object>> consumers = allConsumer.get(hash);
+        if (!CollectionUtils.isEmpty(consumers)) {
+            consumers.remove(consumerHash);
+        }
+        if (CollectionUtils.isEmpty(consumers)) {
+            bindingService.unbindConsumers(topic);
+            MessageHandler handler = handlerMap.remove(hash);
+            if (null != handler) {
+                channel.unsubscribe(handler);
+            }
+            allConsumer.remove(hash);
+        }
+    }
+
     @Override
     protected ExecutableRuleNode doCreate(Config config) {
         MessageChannel messageChannel = resolver.resolveDestination(config.getTopic());
+        String topic = config.getTopic();
 
         AtomicBoolean started = new AtomicBoolean();
         return context -> {
@@ -85,21 +153,19 @@ public class CloudStreamWorkerNode extends AbstractExecutableRuleNodeFactoryStra
             started.set(true);
             if (config.type == Type.Consumer && messageChannel instanceof SubscribableChannel) {
                 SubscribableChannel channel = ((SubscribableChannel) messageChannel);
-                MessageHandler handler = message ->
-                        context.getOutput()
-                                .write(RuleData.create(convertPayload(message.getPayload())));
+                Consumer<Object> consumer = data -> context.getOutput().write(RuleData.create(data));
 
-                channel.subscribe(handler);
+                addListener(topic, channel, consumer);
 
                 context.getInput()
                         .acceptOnce(ruleData -> context.getOutput()
                                 .write(ruleData.newData(ruleData.getData())));
 
-                context.onStop(() ->{
-                    bindingService.unbindConsumers(config.getTopic());
-                    channel.unsubscribe(handler);
+                context.onStop(() -> {
+                    removeListener(topic, channel, consumer);
+                    started.set(false);
                 });
-                bindingService.bindConsumer(messageChannel,config.getTopic());
+
             } else {
                 context.getInput()
                         .acceptOnce(ruleData -> {
