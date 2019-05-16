@@ -88,8 +88,8 @@ public class LocalDeviceInstanceService extends GenericEntityService<DeviceInsta
                     continue;
                 }
                 total += createUpdate()
-                        .where()
                         .set(DeviceInstanceEntity::getState, state)
+                        .where()
                         .in(DeviceInstanceEntity::getId, deviceIdList)
                         .exec();
             }
