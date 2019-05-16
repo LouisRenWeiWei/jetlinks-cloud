@@ -14,7 +14,7 @@
         </outputs>
     </node>
 
-    <node id="write-influxdb" executor="influx-write" nodeType="PEEK" name="数据写入到influxdb">
+    <node id="write-influxdb" executor="influx-write" end="true" nodeType="PEEK" name="数据写入到influxdb">
         <configuration>
             <url>http://127.0.0.1:8086/</url>
             <username>jetlinks</username>
