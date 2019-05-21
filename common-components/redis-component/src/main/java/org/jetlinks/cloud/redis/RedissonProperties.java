@@ -2,7 +2,10 @@ package org.jetlinks.cloud.redis;
 
 import lombok.Getter;
 import lombok.Setter;
+import org.hswebframework.web.bean.FastBeanCopier;
 import org.redisson.config.Config;
+
+import java.util.Map;
 
 /**
  * @author zhouhao
@@ -25,6 +28,8 @@ public class RedissonProperties {
 
     private String masterName = "jetlinks-redis-cluster";
 
+    private Map<String, Object> config;
+
     private Type type = Type.single;
 
     public Config toConfig(RedissonProperties defaultProperties) {
@@ -34,7 +39,13 @@ public class RedissonProperties {
         if (this.password == null) {
             this.password = defaultProperties.password;
         }
-        return type.parse(this);
+        Config config = type.parse(this);
+
+        if (this.config != null) {
+            FastBeanCopier.copy(this.config, config);
+        }
+
+        return config;
     }
 
     public enum Type {
