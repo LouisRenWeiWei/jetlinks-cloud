@@ -5,6 +5,8 @@ import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.spi.VerticleFactory;
 import io.vertx.mqtt.MqttServerOptions;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.jetlinks.cloud.device.gateway.events.DeviceOnlineEvent;
 import org.jetlinks.cloud.device.gateway.events.DeviceOfflineEvent;
@@ -14,6 +16,7 @@ import org.jetlinks.gateway.monitor.GatewayServerMonitor;
 import org.jetlinks.gateway.monitor.RedissonGatewayServerMonitor;
 import org.jetlinks.gateway.session.DefaultDeviceSessionManager;
 import org.jetlinks.protocol.ProtocolSupports;
+import org.jetlinks.protocol.message.codec.Transport;
 import org.jetlinks.registry.api.DeviceMessageHandler;
 import org.jetlinks.registry.api.DeviceRegistry;
 import org.springframework.beans.factory.DisposableBean;
@@ -26,8 +29,11 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -63,7 +69,7 @@ public class DeviceGatewayConfiguration {
                                                       RedissonClientRepository repository) {
         return new RedissonGatewayServerMonitor(environment.getProperty("gateway.server-id"),
                 repository.getClient("device-registry")
-                        .orElseGet(repository::getDefaultClient),executorService);
+                        .orElseGet(repository::getDefaultClient), executorService);
     }
 
     @Bean(initMethod = "init", destroyMethod = "shutdown")
@@ -74,6 +80,7 @@ public class DeviceGatewayConfiguration {
                                                             DeviceMessageHandler deviceMessageHandler,
                                                             GatewayServerMonitor gatewayServerMonitor,
                                                             ApplicationEventPublisher eventPublisher,
+                                                            DeviceSessionManagerProperties sessionManagerProperties,
                                                             ScheduledExecutorService executorService) {
         DefaultDeviceSessionManager sessionManager = new DefaultDeviceSessionManager();
         sessionManager.setServerId(environment.getProperty("gateway.server-id"));
@@ -84,7 +91,26 @@ public class DeviceGatewayConfiguration {
         sessionManager.setDeviceMessageHandler(deviceMessageHandler);
         sessionManager.setOnDeviceRegister(session -> eventPublisher.publishEvent(new DeviceOnlineEvent(session, System.currentTimeMillis())));
         sessionManager.setOnDeviceUnRegister(session -> eventPublisher.publishEvent(new DeviceOfflineEvent(session, System.currentTimeMillis() + 100)));
+
+        sessionManager.setTransportLimits(sessionManagerProperties.getConnectionLimits());
+
         return sessionManager;
+    }
+
+    @ConfigurationProperties(prefix = "device.session")
+    @Component
+    @Getter
+    @Setter
+    public static class DeviceSessionManagerProperties {
+
+        public DeviceSessionManagerProperties() {
+            long maxConnection = (Runtime.getRuntime().maxMemory() / 1024 / 1024) * 90;
+
+            connectionLimits.put(Transport.MQTT, maxConnection);
+        }
+
+        private Map<Transport, Long> connectionLimits = new ConcurrentHashMap<>();
+
     }
 
     @Bean
