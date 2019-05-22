@@ -17,7 +17,6 @@ import org.jetlinks.protocol.message.event.EventMessage;
 import org.jetlinks.protocol.message.function.FunctionInvokeMessageReply;
 import org.jetlinks.protocol.message.property.ReadPropertyMessageReply;
 import org.jetlinks.protocol.message.property.WritePropertyMessageReply;
-import org.jetlinks.protocol.metadata.FunctionMetadata;
 import org.jetlinks.protocol.metadata.Jsonable;
 import org.jetlinks.registry.api.DeviceMessageHandler;
 import org.jetlinks.registry.api.DeviceRegistry;
@@ -118,25 +117,12 @@ public class FromDeviceMessageHandler {
 
     @EventListener
     public void handleFunctionReplyMessage(DeviceMessageEvent<FunctionInvokeMessageReply> event) {
-        FunctionInvokeMessageReply message = event.getMessage();
+//        FunctionInvokeMessageReply message = event.getMessage();
         DeviceSession session = event.getSession();
         // 设备配置了转发到指定的topic
         trySendMessageToMq(event::getMessage,
                 functionReplyTopic.getConfigValue(session.getOperation()).asList(String.class));
-        //判断是否为异步操作，如果不异步的，则需要同步回复结果
-        boolean async = session.getOperation()
-                .getMetadata()
-                .getFunction(message.getFunctionId())
-                .map(FunctionMetadata::isAsync)
-                .orElse(false);
-        //同步操作则直接返回
-        if (!async) {
-            if (StringUtils.isEmpty(message.getMessageId())) {
-                log.warn("消息无messageId:{}", message.toJson());
-                return;
-            }
-            deviceMessageHandler.reply(message);
-        }
+
     }
 
     @EventListener
