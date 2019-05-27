@@ -4,7 +4,7 @@ import org.apache.commons.lang.math.RandomUtils;
 import org.hswebframework.web.controller.message.ResponseMessage;
 import org.jetlinks.gateway.monitor.GatewayServerInfo;
 import org.jetlinks.gateway.monitor.GatewayServerMonitor;
-import org.jetlinks.protocol.message.codec.Transport;
+import org.jetlinks.core.message.codec.Transport;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;

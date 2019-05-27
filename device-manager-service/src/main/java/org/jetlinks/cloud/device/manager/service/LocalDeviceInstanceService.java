@@ -5,7 +5,7 @@ import org.hswebframework.web.service.GenericEntityService;
 import org.jetlinks.cloud.device.manager.dao.DeviceInstanceDao;
 import org.jetlinks.cloud.device.manager.entity.DeviceInstanceEntity;
 import org.jetlinks.cloud.device.manager.entity.DeviceProductEntity;
-import org.jetlinks.protocol.device.*;
+import org.jetlinks.core.device.*;
 import org.jetlinks.registry.api.DeviceRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

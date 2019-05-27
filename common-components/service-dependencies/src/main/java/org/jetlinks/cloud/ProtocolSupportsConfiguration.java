@@ -1,6 +1,6 @@
 package org.jetlinks.cloud;
 
-import org.jetlinks.protocol.defaults.JetLinksProtocolSupport;
+import org.jetlinks.core.support.JetLinksProtocolSupport;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
