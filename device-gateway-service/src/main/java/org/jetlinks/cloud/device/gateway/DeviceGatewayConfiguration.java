@@ -114,12 +114,12 @@ public class DeviceGatewayConfiguration {
     }
 
     @Bean
-    public MQTTServerInitializer mqttServerInitializer() {
-        return new MQTTServerInitializer();
+    public VertxServerInitializer mqttServerInitializer() {
+        return new VertxServerInitializer();
     }
 
     @Slf4j
-    public static class MQTTServerInitializer implements CommandLineRunner, DisposableBean {
+    public static class VertxServerInitializer implements CommandLineRunner, DisposableBean {
 
         @Autowired
         private VerticleFactory verticleFactory;
