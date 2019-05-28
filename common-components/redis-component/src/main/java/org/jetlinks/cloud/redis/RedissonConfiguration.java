@@ -123,7 +123,7 @@ public class RedissonConfiguration {
     }
 
 
-    @Bean(destroyMethod = "close")
+    @Bean
     public RedissonDeviceMessageHandler deviceMessageHandler(RedissonClientRepository repository, ExecutorService executorService) {
         return new RedissonDeviceMessageHandler(repository.getClient("device-registry")
                 .orElseGet(repository::getDefaultClient), executorService);
