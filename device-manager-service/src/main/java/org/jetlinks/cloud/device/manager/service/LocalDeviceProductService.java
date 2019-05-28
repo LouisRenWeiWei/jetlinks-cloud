@@ -8,13 +8,13 @@ import org.jetlinks.cloud.device.manager.entity.DeviceProductEntity;
 import org.jetlinks.cloud.device.manager.enums.DeviceFeature;
 import org.jetlinks.core.device.DeviceProductInfo;
 import org.jetlinks.core.device.DeviceProductOperation;
-import org.jetlinks.registry.api.DeviceRegistry;
+import org.jetlinks.core.device.registry.DeviceRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionSynchronizationAdapter;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-import static java.util.Optional.*;
+import static java.util.Optional.ofNullable;
 
 @Service
 @Slf4j

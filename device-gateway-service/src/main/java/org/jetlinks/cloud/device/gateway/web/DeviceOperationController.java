@@ -3,11 +3,11 @@ package org.jetlinks.cloud.device.gateway.web;
 import lombok.SneakyThrows;
 import org.hswebframework.web.controller.message.ResponseMessage;
 import org.hswebframework.web.id.IDGenerator;
+import org.jetlinks.core.device.registry.DeviceRegistry;
 import org.jetlinks.core.message.DeviceMessageReply;
 import org.jetlinks.core.message.function.FunctionInvokeMessageReply;
 import org.jetlinks.core.message.function.FunctionParameter;
 import org.jetlinks.core.message.property.ReadPropertyMessageReply;
-import org.jetlinks.registry.api.DeviceRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 

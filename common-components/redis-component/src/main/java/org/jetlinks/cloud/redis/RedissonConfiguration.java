@@ -5,7 +5,7 @@ import org.hswebframework.web.authorization.token.SimpleUserToken;
 import org.hswebframework.web.authorization.token.UserToken;
 import org.hswebframework.web.authorization.token.UserTokenManager;
 import org.jetlinks.core.ProtocolSupports;
-import org.jetlinks.registry.api.DeviceRegistry;
+import org.jetlinks.core.device.registry.DeviceRegistry;
 import org.jetlinks.registry.redis.RedissonDeviceMessageHandler;
 import org.jetlinks.registry.redis.RedissonDeviceRegistry;
 import org.nustaq.serialization.FSTConfiguration;

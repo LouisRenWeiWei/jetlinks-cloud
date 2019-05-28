@@ -6,7 +6,7 @@ import org.jetlinks.cloud.DeviceConfigKey;
 import org.jetlinks.core.device.DeviceInfo;
 import org.jetlinks.core.device.DeviceProductInfo;
 import org.jetlinks.core.device.DeviceProductOperation;
-import org.jetlinks.registry.api.DeviceRegistry;
+import org.jetlinks.core.device.registry.DeviceRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;

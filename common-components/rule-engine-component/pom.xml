@@ -45,7 +45,7 @@
 
         <dependency>
             <groupId>org.jetlinks</groupId>
-            <artifactId>jetlinks-registry-api</artifactId>
+            <artifactId>jetlinks-core</artifactId>
             <version>${project.version}</version>
             <optional>true</optional>
         </dependency>
