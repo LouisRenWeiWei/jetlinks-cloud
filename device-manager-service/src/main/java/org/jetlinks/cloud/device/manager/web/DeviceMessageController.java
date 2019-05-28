@@ -5,12 +5,11 @@ import lombok.SneakyThrows;
 import org.hswebframework.web.controller.message.ResponseMessage;
 import org.hswebframework.web.id.IDGenerator;
 import org.jetlinks.cloud.device.manager.service.LocalDeviceInstanceService;
-import org.jetlinks.registry.api.DeviceRegistry;
+import org.jetlinks.core.device.registry.DeviceRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 @RestController

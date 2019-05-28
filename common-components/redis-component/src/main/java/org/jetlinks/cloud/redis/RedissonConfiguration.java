@@ -31,7 +31,6 @@ import org.springframework.context.annotation.Configuration;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -124,9 +123,9 @@ public class RedissonConfiguration {
 
 
     @Bean
-    public RedissonDeviceMessageHandler deviceMessageHandler(RedissonClientRepository repository, ExecutorService executorService) {
+    public RedissonDeviceMessageHandler deviceMessageHandler(RedissonClientRepository repository) {
         return new RedissonDeviceMessageHandler(repository.getClient("device-registry")
-                .orElseGet(repository::getDefaultClient), executorService);
+                .orElseGet(repository::getDefaultClient));
     }
 
     @Bean
