@@ -6,8 +6,8 @@ import org.jetlinks.cloud.device.manager.entity.DeviceInstanceEntity
 import org.jetlinks.cloud.device.manager.enums.DeviceFeature
 import org.jetlinks.cloud.device.manager.event.dispatcher.DeviceOnlineOfflineConsumer
 import org.jetlinks.cloud.device.manager.service.LocalDeviceInstanceService
-import org.jetlinks.protocol.device.DeviceState
-import org.jetlinks.registry.api.DeviceRegistry
+import org.jetlinks.core.device.DeviceState
+import org.jetlinks.core.device.registry.DeviceRegistry
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.cloud.stream.binding.BinderAwareChannelResolver
