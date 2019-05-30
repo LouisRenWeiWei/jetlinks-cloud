@@ -39,7 +39,7 @@ public class DeviceGatewayServiceApplication {
 
         @Getter
         @Setter
-        private long initStartWith=0;
+        private long initStartWith = 0;
 
         @Getter
         @Setter
@@ -134,25 +134,28 @@ public class DeviceGatewayServiceApplication {
 
             productOperation.put(DeviceConfigKey.functionReplyTopic.getValue(), "[\"device.function.reply\"]");
 
-            //自动注册模拟设备
-            for (long i = initStartWith; i < initDeviceNumber; i++) {
-                DeviceInfo deviceInfo = new DeviceInfo();
-                deviceInfo.setId("test" + i);
-                deviceInfo.setProtocol("jet-links");
-                deviceInfo.setName("test");
-                deviceInfo.setProductId(productInfo.getId());
-                registry.registry(deviceInfo);
-            }
-            //注册20个子设备绑定到test0
-            for (int i = 0; i < 20; i++) {
-                DeviceInfo deviceInfo = new DeviceInfo();
-                deviceInfo.setId("child" + i);
-                deviceInfo.setProtocol("jet-links");
-                deviceInfo.setName("test-child");
-                deviceInfo.setProductId(productInfo.getId());
-                deviceInfo.setParentDeviceId("test0");
-                registry.registry(deviceInfo);
-            }
+            new Thread(() -> {
+                //自动注册模拟设备
+                for (long i = initStartWith; i < initDeviceNumber; i++) {
+                    DeviceInfo deviceInfo = new DeviceInfo();
+                    deviceInfo.setId("test" + i);
+                    deviceInfo.setProtocol("jet-links");
+                    deviceInfo.setName("test");
+                    deviceInfo.setProductId(productInfo.getId());
+                    registry.registry(deviceInfo);
+                }
+                //注册20个子设备绑定到test0
+                for (int i = 0; i < 20; i++) {
+                    DeviceInfo deviceInfo = new DeviceInfo();
+                    deviceInfo.setId("child" + i);
+                    deviceInfo.setProtocol("jet-links");
+                    deviceInfo.setName("test-child");
+                    deviceInfo.setProductId(productInfo.getId());
+                    deviceInfo.setParentDeviceId("test0");
+                    registry.registry(deviceInfo);
+                }
+            }).start();
+
         }
     }
 
