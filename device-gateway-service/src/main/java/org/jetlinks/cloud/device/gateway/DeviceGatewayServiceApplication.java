@@ -39,6 +39,10 @@ public class DeviceGatewayServiceApplication {
 
         @Getter
         @Setter
+        private long initStartWith=0;
+
+        @Getter
+        @Setter
         private long initDeviceNumber = 1000;
 
         @Override
@@ -131,7 +135,7 @@ public class DeviceGatewayServiceApplication {
             productOperation.put(DeviceConfigKey.functionReplyTopic.getValue(), "[\"device.function.reply\"]");
 
             //自动注册模拟设备
-            for (int i = 0; i < initDeviceNumber; i++) {
+            for (long i = initStartWith; i < initDeviceNumber; i++) {
                 DeviceInfo deviceInfo = new DeviceInfo();
                 deviceInfo.setId("test" + i);
                 deviceInfo.setProtocol("jet-links");
