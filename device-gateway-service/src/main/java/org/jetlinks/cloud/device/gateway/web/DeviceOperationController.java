@@ -3,6 +3,7 @@ package org.jetlinks.cloud.device.gateway.web;
 import lombok.SneakyThrows;
 import org.hswebframework.web.controller.message.ResponseMessage;
 import org.hswebframework.web.id.IDGenerator;
+import org.jetlinks.core.device.DeviceOperation;
 import org.jetlinks.core.device.registry.DeviceRegistry;
 import org.jetlinks.core.message.DeviceMessageReply;
 import org.jetlinks.core.message.function.FunctionInvokeMessageReply;
@@ -24,6 +25,14 @@ public class DeviceOperationController {
 
     @Autowired
     private DeviceRegistry registry;
+
+    @GetMapping("/{deviceId}/state")
+    public ResponseMessage<Byte> checkDeviceState(@PathVariable String deviceId) {
+        DeviceOperation operation= registry.getDevice(deviceId);
+        operation.checkState();
+
+        return ResponseMessage.ok(operation.getState());
+    }
 
     @GetMapping("/{deviceId}/metadata")
     public ResponseMessage<String> getDeviceMetadata(@PathVariable String deviceId) {
