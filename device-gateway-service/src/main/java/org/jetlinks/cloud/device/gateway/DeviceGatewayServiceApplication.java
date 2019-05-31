@@ -135,8 +135,9 @@ public class DeviceGatewayServiceApplication {
             productOperation.put(DeviceConfigKey.functionReplyTopic.getValue(), "[\"device.function.reply\"]");
 
             new Thread(() -> {
+                long sum = initStartWith + initDeviceNumber;
                 //自动注册模拟设备
-                for (long i = initStartWith; i < initDeviceNumber; i++) {
+                for (long i = initStartWith; i < sum; i++) {
                     DeviceInfo deviceInfo = new DeviceInfo();
                     deviceInfo.setId("test" + i);
                     deviceInfo.setProtocol("jet-links");
