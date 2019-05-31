@@ -181,7 +181,7 @@ public class FromDeviceMessageHandler {
 
 
     private void sendMessageToMq(List<String> topics, String json) {
-        log.info("发送消息到MQ,topics:{} <= {}", topics, json);
+        log.debug("发送消息到MQ,topics:{} <= {}", topics, json);
         for (String topic : topics) {
             resolver.resolveDestination(topic)
                     .send(MessageBuilder.withPayload(json)
