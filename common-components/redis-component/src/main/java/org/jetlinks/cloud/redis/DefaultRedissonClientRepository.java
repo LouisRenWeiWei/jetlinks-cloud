@@ -1,7 +1,9 @@
 package org.jetlinks.cloud.redis;
 
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.epoll.Epoll;
 import io.netty.channel.epoll.EpollEventLoopGroup;
+import io.netty.channel.kqueue.KQueue;
 import io.netty.channel.kqueue.KQueueEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.util.concurrent.DefaultThreadFactory;
@@ -11,6 +13,7 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
+import org.redisson.client.codec.Codec;
 import org.redisson.config.Config;
 import org.redisson.config.TransportMode;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,6 +45,11 @@ public class DefaultRedissonClientRepository implements RedissonClientRepository
     @Setter
     private ExecutorService executorService;
 
+    @Getter
+    @Setter
+    private Codec codec;
+
+
     @PreDestroy
     public void destroy() {
         for (RedissonClient client : repository.values()) {
@@ -55,9 +63,9 @@ public class DefaultRedissonClientRepository implements RedissonClientRepository
     public void init() {
         TransportMode transportMode = multiRedissonProperties.getTransportMode();
         int threadSize = multiRedissonProperties.getThreadSize();
-        if (transportMode == TransportMode.EPOLL) {
+        if (transportMode == TransportMode.EPOLL && Epoll.isAvailable()) {
             eventLoopGroup = new EpollEventLoopGroup(threadSize, new DefaultThreadFactory("redisson-epoll-netty"));
-        } else if (transportMode == TransportMode.KQUEUE) {
+        } else if (transportMode == TransportMode.KQUEUE && KQueue.isAvailable()) {
             eventLoopGroup = new KQueueEventLoopGroup(threadSize, new DefaultThreadFactory("redisson-kqueue-netty"));
         } else if (transportMode == TransportMode.NIO) {
             eventLoopGroup = new NioEventLoopGroup(threadSize, new DefaultThreadFactory("redisson-nio-netty"));
@@ -71,6 +79,7 @@ public class DefaultRedissonClientRepository implements RedissonClientRepository
             config.setEventLoopGroup(eventLoopGroup);
             config.setExecutor(executorService);
             config.setTransportMode(transportMode);
+            config.setCodec(codec);
             repository.put(entry.getKey(), Redisson.create(config));
         }
     }

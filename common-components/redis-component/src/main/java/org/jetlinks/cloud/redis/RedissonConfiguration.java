@@ -43,7 +43,11 @@ public class RedissonConfiguration {
 
     @Bean
     public RedissonClientRepository redissonClientRepository() {
-        return new DefaultRedissonClientRepository();
+        DefaultRedissonClientRepository repository = new DefaultRedissonClientRepository();
+
+        repository.setCodec(fstCodec());
+
+        return repository;
     }
 
     @Bean
