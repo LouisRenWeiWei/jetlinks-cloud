@@ -45,13 +45,19 @@ public class DeviceOperationController {
     @SneakyThrows
     public ResponseMessage<DeviceMessageReply> sendReadProperty(@PathVariable String deviceId,
                                                                 @PathVariable String name) {
+        String messageId = IDGenerator.MD5.generate();
 
         ReadPropertyMessageReply reply = registry.getDevice(deviceId)
                 .messageSender()
                 .readProperty(name)
-                .send()
-                .toCompletableFuture()
-                .get(10, TimeUnit.SECONDS);
+                .messageId(messageId)
+                .trySend(10, TimeUnit.SECONDS)
+                .recover(TimeoutException.class, (err) ->
+                        ReadPropertyMessageReply
+                                .create()
+                                .error(ErrorCode.TIME_OUT)
+                                .messageId(messageId))
+                .get();
         return ResponseMessage.ok(reply);
     }
 
@@ -74,7 +80,8 @@ public class DeviceOperationController {
                 .trySend(10, TimeUnit.SECONDS)
                 .recover(TimeoutException.class, (err) ->
                         FunctionInvokeMessageReply
-                                .failure(ErrorCode.TIME_OUT)
+                                .create()
+                                .error(ErrorCode.TIME_OUT)
                                 .messageId(messageId))
                 .get();
         return ResponseMessage.ok(reply);
@@ -92,7 +99,8 @@ public class DeviceOperationController {
                 .tryRetrieveReply(1, TimeUnit.SECONDS)
                 .recover(TimeoutException.class, (err) ->
                         FunctionInvokeMessageReply
-                                .failure(ErrorCode.TIME_OUT)
+                                .create()
+                                .error(ErrorCode.TIME_OUT)
                                 .messageId(messageId))
                 .get();
 
