@@ -5,6 +5,7 @@ import org.hswebframework.web.controller.message.ResponseMessage;
 import org.hswebframework.web.id.IDGenerator;
 import org.jetlinks.core.device.DeviceOperation;
 import org.jetlinks.core.device.registry.DeviceRegistry;
+import org.jetlinks.core.enums.ErrorCode;
 import org.jetlinks.core.message.DeviceMessageReply;
 import org.jetlinks.core.message.function.FunctionInvokeMessageReply;
 import org.jetlinks.core.message.function.FunctionParameter;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * @author zhouhao
@@ -28,7 +30,7 @@ public class DeviceOperationController {
 
     @GetMapping("/{deviceId}/state")
     public ResponseMessage<Byte> checkDeviceState(@PathVariable String deviceId) {
-        DeviceOperation operation= registry.getDevice(deviceId);
+        DeviceOperation operation = registry.getDevice(deviceId);
         operation.checkState();
 
         return ResponseMessage.ok(operation.getState());
@@ -57,16 +59,44 @@ public class DeviceOperationController {
     @SneakyThrows
     public ResponseMessage<FunctionInvokeMessageReply> invokeFunction(@PathVariable String deviceId,
                                                                       @PathVariable String id,
+                                                                      @RequestParam(required = false) Boolean async,
                                                                       @RequestBody List<FunctionParameter> input) {
+        String messageId = IDGenerator.MD5.generate();
+
         FunctionInvokeMessageReply reply = registry
                 .getDevice(deviceId)
                 .messageSender()
                 .invokeFunction(id)
+                .messageId(messageId)
+                .async(async)
                 .setParameter(input)
                 .messageId(IDGenerator.MD5.generate())
-                .send()
-                .toCompletableFuture()
-                .get(10, TimeUnit.SECONDS);
+                .trySend(10, TimeUnit.SECONDS)
+                .recover(TimeoutException.class, (err) ->
+                        FunctionInvokeMessageReply
+                                .failure(ErrorCode.TIME_OUT)
+                                .messageId(messageId))
+                .get();
         return ResponseMessage.ok(reply);
+    }
+
+    @GetMapping("/{deviceId}/function/{messageId}")
+    @SneakyThrows
+    public ResponseMessage<FunctionInvokeMessageReply> invokeFunction(@PathVariable String deviceId,
+                                                                      @PathVariable String messageId) {
+
+        FunctionInvokeMessageReply reply = registry.getDevice(deviceId)
+                .messageSender()
+                .invokeFunction("_")//写啥都可以
+                .messageId(messageId)
+                .tryRetrieveReply(1, TimeUnit.SECONDS)
+                .recover(TimeoutException.class, (err) ->
+                        FunctionInvokeMessageReply
+                                .failure(ErrorCode.TIME_OUT)
+                                .messageId(messageId))
+                .get();
+
+        return ResponseMessage.ok(reply);
+
     }
 }
