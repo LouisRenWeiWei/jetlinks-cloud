@@ -25,9 +25,14 @@ import org.springframework.cloud.stream.annotation.EnableBinding;
 import org.springframework.cloud.stream.binding.BinderAwareChannelResolver;
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.retry.backoff.FixedBackOffPolicy;
+import org.springframework.retry.policy.SimpleRetryPolicy;
+import org.springframework.retry.support.RetryTemplate;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import javax.annotation.PostConstruct;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -69,6 +74,7 @@ public class FromDeviceMessageHandler {
     }
 
     @EventListener
+    @Async
     public void handleDeviceRegisterEvent(DeviceOnlineEvent registerEvent) {
         trySendMessageToMq(() -> newConnectData(registerEvent.getSession().getDeviceId()),
                 deviceConnectTopic.getConfigValue(registerEvent.getSession()
@@ -76,6 +82,7 @@ public class FromDeviceMessageHandler {
     }
 
     @EventListener
+    @Async
     public void handleDeviceUnRegisterEvent(DeviceOfflineEvent registerEvent) {
         trySendMessageToMq(() -> newConnectData(registerEvent.getSession().getDeviceId()),
                 deviceDisconnectTopic.getConfigValue(registerEvent.getSession()
@@ -179,13 +186,22 @@ public class FromDeviceMessageHandler {
         }
     }
 
+    private RetryTemplate retryTemplate;
+
+    @PostConstruct
+    public void init() {
+        retryTemplate = new RetryTemplate();
+        FixedBackOffPolicy policy = new FixedBackOffPolicy();
+        policy.setBackOffPeriod(2000L);
+        retryTemplate.setBackOffPolicy(policy);
+        retryTemplate.setRetryPolicy(new SimpleRetryPolicy(3));
+        retryTemplate.setThrowLastExceptionOnExhausted(false);
+    }
 
     private void sendMessageToMq(List<String> topics, String json) {
         log.debug("发送消息到MQ,topics:{} <= {}", topics, json);
         for (String topic : topics) {
-            resolver.resolveDestination(topic)
-                    .send(MessageBuilder.withPayload(json)
-                            .build());
+            retryTemplate.execute((context) -> resolver.resolveDestination(topic).send(MessageBuilder.withPayload(json).build()));
         }
     }
 }

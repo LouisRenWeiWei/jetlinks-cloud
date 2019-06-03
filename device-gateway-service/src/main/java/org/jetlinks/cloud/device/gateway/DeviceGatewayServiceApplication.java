@@ -14,6 +14,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cloud.client.SpringCloudApplication;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Component;
 
 /**
@@ -23,6 +24,7 @@ import org.springframework.stereotype.Component;
 @SpringCloudApplication
 @ComponentScan("org.jetlinks.cloud")
 @EnableCaching
+@EnableAsync
 public class DeviceGatewayServiceApplication {
     public static void main(String[] args) {
 
