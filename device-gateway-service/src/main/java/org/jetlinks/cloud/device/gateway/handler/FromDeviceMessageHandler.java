@@ -52,6 +52,7 @@ import static org.jetlinks.cloud.DeviceConfigKey.*;
 @Component
 @Slf4j
 @EnableBinding
+@Async
 public class FromDeviceMessageHandler {
 
     @Autowired
@@ -74,7 +75,6 @@ public class FromDeviceMessageHandler {
     }
 
     @EventListener
-    @Async
     public void handleDeviceRegisterEvent(DeviceOnlineEvent registerEvent) {
         trySendMessageToMq(() -> newConnectData(registerEvent.getSession().getDeviceId()),
                 deviceConnectTopic.getConfigValue(registerEvent.getSession()
@@ -82,7 +82,6 @@ public class FromDeviceMessageHandler {
     }
 
     @EventListener
-    @Async
     public void handleDeviceUnRegisterEvent(DeviceOfflineEvent registerEvent) {
         trySendMessageToMq(() -> newConnectData(registerEvent.getSession().getDeviceId()),
                 deviceDisconnectTopic.getConfigValue(registerEvent.getSession()
