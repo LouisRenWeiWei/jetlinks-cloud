@@ -18,23 +18,28 @@ import org.jetlinks.core.message.function.FunctionInvokeMessageReply;
 import org.jetlinks.core.message.property.ReadPropertyMessageReply;
 import org.jetlinks.core.message.property.WritePropertyMessageReply;
 import org.jetlinks.core.metadata.Jsonable;
+import org.jetlinks.gateway.monitor.GatewayServerMonitor;
 import org.jetlinks.gateway.session.DeviceSession;
 import org.jetlinks.gateway.session.DeviceSessionManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.stream.annotation.EnableBinding;
 import org.springframework.cloud.stream.binding.BinderAwareChannelResolver;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.messaging.MessageDeliveryException;
+import org.springframework.messaging.MessageHandlingException;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.retry.backoff.FixedBackOffPolicy;
 import org.springframework.retry.policy.SimpleRetryPolicy;
 import org.springframework.retry.support.RetryTemplate;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -53,6 +58,7 @@ import static org.jetlinks.cloud.DeviceConfigKey.*;
 @Component
 @Slf4j
 @EnableBinding
+@Order(Ordered.HIGHEST_PRECEDENCE)
 public class FromDeviceMessageHandler {
 
     @Autowired
@@ -63,6 +69,9 @@ public class FromDeviceMessageHandler {
 
     @Autowired
     private DeviceSessionManager sessionManager;
+
+    @Autowired
+    private GatewayServerMonitor gatewayServerMonitor;
 
     @Autowired
     private BinderAwareChannelResolver resolver;
@@ -76,7 +85,6 @@ public class FromDeviceMessageHandler {
     }
 
     @EventListener
-    @Async
     public void handleDeviceRegisterEvent(DeviceOnlineEvent registerEvent) {
         trySendMessageToMq(() -> newConnectData(registerEvent.getSession().getDeviceId()),
                 deviceConnectTopic.getConfigValue(registerEvent.getSession()
@@ -84,7 +92,6 @@ public class FromDeviceMessageHandler {
     }
 
     @EventListener
-    @Async
     public void handleDeviceUnRegisterEvent(DeviceOfflineEvent registerEvent) {
         trySendMessageToMq(() -> newConnectData(registerEvent.getSession().getDeviceId()),
                 deviceDisconnectTopic.getConfigValue(registerEvent.getSession()
@@ -207,17 +214,38 @@ public class FromDeviceMessageHandler {
         retryTemplate.setBackOffPolicy(policy);
         retryTemplate.setRetryPolicy(new SimpleRetryPolicy(3));
         retryTemplate.setThrowLastExceptionOnExhausted(false);
+
+        //某个网关节点挂掉了
+        gatewayServerMonitor.onServerDown(serverId -> {
+            JSONObject json = new JSONObject();
+            json.put("serverId", serverId);
+            json.put("timestamp", System.currentTimeMillis());
+            sendMessageToMq(Collections.singletonList("device.gateway.server.down"), json.toJSONString());
+        });
+    }
+
+    private boolean running = true;
+
+    @PreDestroy
+    public void shutdown() {
+        running = false;
     }
 
     private void sendMessageToMq(List<String> topics, String json) {
         for (String topic : topics) {
             boolean success = retryTemplate.execute((context) -> {
                 try {
+                    if (!running) {
+                        return false;
+                    }
                     return resolver
                             .resolveDestination(topic)
                             .send(MessageBuilder.withPayload(json).build());
                 } catch (MessageDeliveryException e) {
                     throw e;
+                } catch (MessageHandlingException e) {
+                    log.warn(e.getMessage());
+                    return false;
                 } catch (Exception e) {
                     log.error(e.getMessage(), e);
                     return false;
@@ -225,7 +253,7 @@ public class FromDeviceMessageHandler {
             });
             if (success) {
                 log.debug("发送消息到MQ,topics:{} <= {}", topics, json);
-            } else {
+            } else if (running) {
                 log.warn("发送消息到MQ失败,topics:{} <= {}", topics, json);
             }
         }
