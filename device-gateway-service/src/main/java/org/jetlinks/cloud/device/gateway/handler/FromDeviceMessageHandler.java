@@ -24,6 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.stream.annotation.EnableBinding;
 import org.springframework.cloud.stream.binding.BinderAwareChannelResolver;
 import org.springframework.context.event.EventListener;
+import org.springframework.messaging.MessageDeliveryException;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.retry.backoff.FixedBackOffPolicy;
 import org.springframework.retry.policy.SimpleRetryPolicy;
@@ -52,7 +53,6 @@ import static org.jetlinks.cloud.DeviceConfigKey.*;
 @Component
 @Slf4j
 @EnableBinding
-@Async
 public class FromDeviceMessageHandler {
 
     @Autowired
@@ -67,14 +67,16 @@ public class FromDeviceMessageHandler {
     @Autowired
     private BinderAwareChannelResolver resolver;
 
-    protected Object newConnectData(String deviceId) {
+    private Object newConnectData(String deviceId) {
         JSONObject object = new JSONObject();
         object.put("deviceId", deviceId);
+        object.put("serverId", sessionManager.getServerId());
         object.put("timestamp", System.currentTimeMillis());
         return object;
     }
 
     @EventListener
+    @Async
     public void handleDeviceRegisterEvent(DeviceOnlineEvent registerEvent) {
         trySendMessageToMq(() -> newConnectData(registerEvent.getSession().getDeviceId()),
                 deviceConnectTopic.getConfigValue(registerEvent.getSession()
@@ -82,6 +84,7 @@ public class FromDeviceMessageHandler {
     }
 
     @EventListener
+    @Async
     public void handleDeviceUnRegisterEvent(DeviceOfflineEvent registerEvent) {
         trySendMessageToMq(() -> newConnectData(registerEvent.getSession().getDeviceId()),
                 deviceDisconnectTopic.getConfigValue(registerEvent.getSession()
@@ -125,10 +128,19 @@ public class FromDeviceMessageHandler {
     public void handleFunctionReplyMessage(DeviceMessageEvent<FunctionInvokeMessageReply> event) {
 //        FunctionInvokeMessageReply message = event.getMessage();
         DeviceSession session = event.getSession();
-        // 设备配置了转发到指定的topic
-        trySendMessageToMq(event::getMessage,
-                functionReplyTopic.getConfigValue(session.getOperation()).asList(String.class));
 
+        FunctionInvokeMessageReply message = event.getMessage();
+        functionReplyTopic
+                .getConfigValue(session.getOperation()).asList(String.class)
+                .ifPresent(list ->
+                        //判断是否为异步消息
+                        deviceMessageHandler.messageIsAsync(message.getMessageId())
+                                .whenComplete((async, error) -> {
+                                    // 设备配置了转发到指定的topic
+                                    trySendMessageToMq(event::getMessage, Optional.of(list.stream()
+                                            .map(topic -> topic.replace("{function}", message.getFunctionId()))
+                                            .collect(Collectors.toList())));
+                                }));
     }
 
     @EventListener
@@ -138,7 +150,7 @@ public class FromDeviceMessageHandler {
             log.warn("消息无messageId:{}", invokeMessage.toJson());
             return;
         }
-        deviceMessageHandler.reply(invokeMessage);
+        // TODO: 2019-06-05 更多操作
     }
 
     @EventListener
@@ -148,7 +160,7 @@ public class FromDeviceMessageHandler {
             log.warn("消息无messageId:{}", invokeMessage.toJson());
             return;
         }
-        deviceMessageHandler.reply(invokeMessage);
+        // TODO: 2019-06-05 更多操作
     }
 
     @EventListener
@@ -200,7 +212,17 @@ public class FromDeviceMessageHandler {
     private void sendMessageToMq(List<String> topics, String json) {
         log.debug("发送消息到MQ,topics:{} <= {}", topics, json);
         for (String topic : topics) {
-            retryTemplate.execute((context) -> resolver.resolveDestination(topic).send(MessageBuilder.withPayload(json).build()));
+            retryTemplate.execute((context) -> {
+                try {
+                    return resolver.resolveDestination(topic)
+                            .send(MessageBuilder.withPayload(json).build());
+                } catch (MessageDeliveryException e) {
+                    throw e;
+                } catch (Exception e) {
+                    log.error(e.getMessage(), e);
+                    return true;
+                }
+            });
         }
     }
 }

@@ -5,6 +5,7 @@ import org.hswebframework.web.authorization.token.SimpleUserToken;
 import org.hswebframework.web.authorization.token.UserToken;
 import org.hswebframework.web.authorization.token.UserTokenManager;
 import org.jetlinks.core.ProtocolSupports;
+import org.jetlinks.core.device.registry.DeviceMessageHandler;
 import org.jetlinks.core.message.interceptor.DeviceMessageSenderInterceptor;
 import org.jetlinks.registry.redis.RedissonDeviceMessageHandler;
 import org.jetlinks.registry.redis.RedissonDeviceRegistry;
@@ -136,10 +137,12 @@ public class RedissonConfiguration {
 
     @Bean
     public RedissonDeviceRegistry deviceRegistry(RedissonClientRepository repository,
+                                         DeviceMessageHandler messageHandler,
                                          ProtocolSupports protocolSupports) {
 
         return new RedissonDeviceRegistry(
                 repository.getClient("device-registry").orElseGet(repository::getDefaultClient),
+                messageHandler,
                 protocolSupports);
     }
 
