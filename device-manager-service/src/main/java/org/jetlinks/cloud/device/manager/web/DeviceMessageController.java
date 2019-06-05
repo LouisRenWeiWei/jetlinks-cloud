@@ -39,16 +39,16 @@ public class DeviceMessageController {
                 .messageSender()
                 .readProperty(property.split("[, ;]"))
                 .messageId(IDGenerator.SNOW_FLAKE_STRING.generate())
-                .send()
-                .toCompletableFuture()
-                .thenApply(reply->{
-                    if(reply.isSuccess()){
+                .trySend(10, TimeUnit.SECONDS)
+                .map(reply -> {
+                    if (reply.isSuccess()) {
                         return ResponseMessage.ok(reply.getProperties());
-                    }else{
-                        return ResponseMessage.error(500,reply.getMessage()).code(reply.getCode());
+                    } else {
+                        return ResponseMessage.error(500, reply.getMessage()).code(reply.getCode());
                     }
                 })
-                .get(10, TimeUnit.SECONDS);
+                .recover(error -> ResponseMessage.error(error.getMessage()))
+                .get();
     }
 
 }

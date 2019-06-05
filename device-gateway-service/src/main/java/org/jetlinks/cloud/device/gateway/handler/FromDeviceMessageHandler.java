@@ -210,19 +210,24 @@ public class FromDeviceMessageHandler {
     }
 
     private void sendMessageToMq(List<String> topics, String json) {
-        log.debug("发送消息到MQ,topics:{} <= {}", topics, json);
         for (String topic : topics) {
-            retryTemplate.execute((context) -> {
+            boolean success = retryTemplate.execute((context) -> {
                 try {
-                    return resolver.resolveDestination(topic)
+                    return resolver
+                            .resolveDestination(topic)
                             .send(MessageBuilder.withPayload(json).build());
                 } catch (MessageDeliveryException e) {
                     throw e;
                 } catch (Exception e) {
                     log.error(e.getMessage(), e);
-                    return true;
+                    return false;
                 }
             });
+            if (success) {
+                log.debug("发送消息到MQ,topics:{} <= {}", topics, json);
+            } else {
+                log.warn("发送消息到MQ失败,topics:{} <= {}", topics, json);
+            }
         }
     }
 }
