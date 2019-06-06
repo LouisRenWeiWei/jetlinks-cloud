@@ -1,7 +1,7 @@
 package org.jetlinks.cloud;
 
-import org.jetlinks.protocol.ProtocolSupport;
-import org.jetlinks.protocol.ProtocolSupports;
+import org.jetlinks.core.ProtocolSupport;
+import org.jetlinks.core.ProtocolSupports;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.stereotype.Component;

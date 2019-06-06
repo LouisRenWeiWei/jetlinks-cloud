@@ -4,8 +4,9 @@ import org.hswebframework.web.authorization.token.DefaultUserTokenManager;
 import org.hswebframework.web.authorization.token.SimpleUserToken;
 import org.hswebframework.web.authorization.token.UserToken;
 import org.hswebframework.web.authorization.token.UserTokenManager;
-import org.jetlinks.protocol.ProtocolSupports;
-import org.jetlinks.registry.api.DeviceRegistry;
+import org.jetlinks.core.ProtocolSupports;
+import org.jetlinks.core.device.registry.DeviceMessageHandler;
+import org.jetlinks.core.message.interceptor.DeviceMessageSenderInterceptor;
 import org.jetlinks.registry.redis.RedissonDeviceMessageHandler;
 import org.jetlinks.registry.redis.RedissonDeviceRegistry;
 import org.nustaq.serialization.FSTConfiguration;
@@ -19,6 +20,8 @@ import org.redisson.client.protocol.Encoder;
 import org.redisson.codec.FstCodec;
 import org.redisson.spring.cache.CacheConfig;
 import org.redisson.spring.cache.RedissonSpringCacheManager;
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -31,7 +34,6 @@ import org.springframework.context.annotation.Configuration;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -44,7 +46,11 @@ public class RedissonConfiguration {
 
     @Bean
     public RedissonClientRepository redissonClientRepository() {
-        return new DefaultRedissonClientRepository();
+        DefaultRedissonClientRepository repository = new DefaultRedissonClientRepository();
+
+        repository.setCodec(fstCodec());
+
+        return repository;
     }
 
     @Bean
@@ -123,19 +129,39 @@ public class RedissonConfiguration {
     }
 
 
-    @Bean(destroyMethod = "close")
-    public RedissonDeviceMessageHandler deviceMessageHandler(RedissonClientRepository repository, ExecutorService executorService) {
+    @Bean
+    public RedissonDeviceMessageHandler deviceMessageHandler(RedissonClientRepository repository) {
         return new RedissonDeviceMessageHandler(repository.getClient("device-registry")
-                .orElseGet(repository::getDefaultClient), executorService);
+                .orElseGet(repository::getDefaultClient));
     }
 
     @Bean
-    public DeviceRegistry deviceRegistry(RedissonClientRepository repository,
+    public RedissonDeviceRegistry deviceRegistry(RedissonClientRepository repository,
+                                         DeviceMessageHandler messageHandler,
                                          ProtocolSupports protocolSupports) {
 
         return new RedissonDeviceRegistry(
                 repository.getClient("device-registry").orElseGet(repository::getDefaultClient),
+                messageHandler,
                 protocolSupports);
+    }
+
+    @Bean
+    public BeanPostProcessor deviceMessageSenderAutoRegister(RedissonDeviceRegistry registry){
+        return new BeanPostProcessor() {
+            @Override
+            public Object postProcessBeforeInitialization(Object o, String s) throws BeansException {
+                return o;
+            }
+
+            @Override
+            public Object postProcessAfterInitialization(Object o, String s) throws BeansException {
+                if(o instanceof DeviceMessageSenderInterceptor){
+                    registry.addInterceptor(((DeviceMessageSenderInterceptor) o));
+                }
+                return o;
+            }
+        };
     }
 
 }

@@ -1,9 +1,8 @@
 package org.jetlinks.cloud.device.manager.service
 
 import org.jetlinks.cloud.device.manager.TestApplication
-import org.jetlinks.cloud.device.manager.entity.DeviceInstanceEntity
 import org.jetlinks.cloud.device.manager.entity.DeviceProductEntity
-import org.jetlinks.registry.api.DeviceRegistry
+import org.jetlinks.core.device.registry.DeviceRegistry
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ContextConfiguration

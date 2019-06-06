@@ -68,3 +68,4 @@ jetlinks:
       rule-engine:  # 规则引擎
         hosts: redis://127.0.0.1:6379
         database: 2
+        connectionPoolSize: 102400

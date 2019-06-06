@@ -36,10 +36,25 @@
                     </script>
                 </condition>
             </output>
+            <output id="go-read-property-fail" target="handler-read-property-fail">
+                <condition type="script">
+                    <lang>js</lang>
+                    <script>
+                        return data.success===false;
+                    </script>
+                </condition>
+            </output>
         </outputs>
+
+    </node>
+    <node id="handler-read-property-fail" end="true" executor="java-method" nodeType="PEEK" name="处理读取错误">
+        <configuration>
+            <className>org.jetlinks.cloud.rule.engine.TestWorker</className>
+            <methodName>handlerReadFail</methodName>
+        </configuration>
     </node>
 
-    <node id="write-property-db" executor="java-method" end="true" nodeType="PEEK" name="记录数据库">
+    <node id="write-property-db" executor="java-method" nodeType="PEEK" name="记录数据库">
         <configuration>
             <className>org.jetlinks.cloud.rule.engine.TestWorker</className>
             <methodName>updateDeviceProperty</methodName>
@@ -61,7 +76,7 @@
         </configuration>
     </node>
 
-    <node id="write-influxdb" executor="influx-write" nodeType="PEEK" name="数据写入到influxdb">
+    <node id="write-influxdb"  executor="influx-write" nodeType="PEEK" name="数据写入到influxdb">
         <configuration>
             <url>http://127.0.0.1:8086/</url>
             <username>jetlinks</username>

@@ -68,6 +68,10 @@ vertx:
     pfx-key-cert-options: # p12 双向认证
       path: ./ssl/jetlinks_server.p12
       password: jetlinks
+  max-event-loop-execute-time: 20
+  max-worker-execute-time-unit: seconds
+  max-worker-execute-time: 20
+  max-event-loop-execute-time-unit: seconds
 
 gateway:
   server-id: ${spring.application.name}:${server.port}

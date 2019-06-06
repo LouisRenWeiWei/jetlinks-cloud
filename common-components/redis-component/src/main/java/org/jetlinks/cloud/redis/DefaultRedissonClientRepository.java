@@ -9,18 +9,14 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
+import org.redisson.client.codec.Codec;
 import org.redisson.config.Config;
 import org.redisson.config.TransportMode;
-import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.ExitCodeEvent;
-import org.springframework.cloud.context.config.annotation.RefreshScope;
-import org.springframework.context.ApplicationEvent;
-import org.springframework.context.annotation.ScopedProxyMode;
-import org.springframework.context.event.EventListener;
 import org.springframework.core.Ordered;
 
 import javax.annotation.PostConstruct;
@@ -30,8 +26,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * @author zhouhao
@@ -51,6 +45,11 @@ public class DefaultRedissonClientRepository implements RedissonClientRepository
     @Setter
     private ExecutorService executorService;
 
+    @Getter
+    @Setter
+    private Codec codec;
+
+
     @PreDestroy
     public void destroy() {
         for (RedissonClient client : repository.values()) {
@@ -60,12 +59,13 @@ public class DefaultRedissonClientRepository implements RedissonClientRepository
     }
 
     @PostConstruct
+    @SneakyThrows
     public void init() {
         TransportMode transportMode = multiRedissonProperties.getTransportMode();
         int threadSize = multiRedissonProperties.getThreadSize();
-        if (transportMode == TransportMode.EPOLL) {
+        if (transportMode == TransportMode.EPOLL && Epoll.isAvailable()) {
             eventLoopGroup = new EpollEventLoopGroup(threadSize, new DefaultThreadFactory("redisson-epoll-netty"));
-        } else if (transportMode == TransportMode.KQUEUE) {
+        } else if (transportMode == TransportMode.KQUEUE && KQueue.isAvailable()) {
             eventLoopGroup = new KQueueEventLoopGroup(threadSize, new DefaultThreadFactory("redisson-kqueue-netty"));
         } else if (transportMode == TransportMode.NIO) {
             eventLoopGroup = new NioEventLoopGroup(threadSize, new DefaultThreadFactory("redisson-nio-netty"));
@@ -79,6 +79,7 @@ public class DefaultRedissonClientRepository implements RedissonClientRepository
             config.setEventLoopGroup(eventLoopGroup);
             config.setExecutor(executorService);
             config.setTransportMode(transportMode);
+            config.setCodec(codec);
             repository.put(entry.getKey(), Redisson.create(config));
         }
     }

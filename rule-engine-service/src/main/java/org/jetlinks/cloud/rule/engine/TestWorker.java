@@ -1,6 +1,7 @@
 package org.jetlinks.cloud.rule.engine;
 
 import lombok.extern.slf4j.Slf4j;
+import org.jetlinks.rule.engine.api.RuleData;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -13,5 +14,10 @@ public class TestWorker {
 
         log.debug("修改设备[{}]属性:{}",deviceId,parameter);
         return true;
+    }
+
+    public void handlerReadFail(RuleData ruleData){
+
+        log.warn("读取设备属性错误:{}",ruleData.toString());
     }
 }

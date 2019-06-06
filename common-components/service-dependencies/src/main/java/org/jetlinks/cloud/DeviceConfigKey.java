@@ -3,8 +3,8 @@ package org.jetlinks.cloud;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.hswebframework.web.dict.EnumDict;
-import org.jetlinks.protocol.metadata.ValueWrapper;
-import org.jetlinks.protocol.device.DeviceOperation;
+import org.jetlinks.core.metadata.ValueWrapper;
+import org.jetlinks.core.device.DeviceOperation;
 
 /**
  * 设备配置常量

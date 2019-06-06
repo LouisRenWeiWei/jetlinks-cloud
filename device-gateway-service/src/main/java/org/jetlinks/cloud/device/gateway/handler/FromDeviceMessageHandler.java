@@ -8,27 +8,32 @@ import org.jetlinks.cloud.device.gateway.events.ChildDeviceOnlineEvent;
 import org.jetlinks.cloud.device.gateway.events.DeviceOfflineEvent;
 import org.jetlinks.cloud.device.gateway.events.DeviceOnlineEvent;
 import org.jetlinks.cloud.device.gateway.vertx.DeviceMessageEvent;
+import org.jetlinks.core.device.DeviceOperation;
+import org.jetlinks.core.device.registry.DeviceMessageHandler;
+import org.jetlinks.core.device.registry.DeviceRegistry;
+import org.jetlinks.core.message.event.ChildDeviceOfflineMessage;
+import org.jetlinks.core.message.event.ChildDeviceOnlineMessage;
+import org.jetlinks.core.message.event.EventMessage;
+import org.jetlinks.core.message.function.FunctionInvokeMessageReply;
+import org.jetlinks.core.message.property.ReadPropertyMessageReply;
+import org.jetlinks.core.message.property.WritePropertyMessageReply;
+import org.jetlinks.core.metadata.Jsonable;
 import org.jetlinks.gateway.session.DeviceSession;
 import org.jetlinks.gateway.session.DeviceSessionManager;
-import org.jetlinks.protocol.device.DeviceOperation;
-import org.jetlinks.protocol.message.event.ChildDeviceOfflineMessage;
-import org.jetlinks.protocol.message.event.ChildDeviceOnlineMessage;
-import org.jetlinks.protocol.message.event.EventMessage;
-import org.jetlinks.protocol.message.function.FunctionInvokeMessageReply;
-import org.jetlinks.protocol.message.property.ReadPropertyMessageReply;
-import org.jetlinks.protocol.message.property.WritePropertyMessageReply;
-import org.jetlinks.protocol.metadata.FunctionMetadata;
-import org.jetlinks.protocol.metadata.Jsonable;
-import org.jetlinks.registry.api.DeviceMessageHandler;
-import org.jetlinks.registry.api.DeviceRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.stream.annotation.EnableBinding;
 import org.springframework.cloud.stream.binding.BinderAwareChannelResolver;
 import org.springframework.context.event.EventListener;
+import org.springframework.messaging.MessageDeliveryException;
 import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.retry.backoff.FixedBackOffPolicy;
+import org.springframework.retry.policy.SimpleRetryPolicy;
+import org.springframework.retry.support.RetryTemplate;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import javax.annotation.PostConstruct;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -62,14 +67,16 @@ public class FromDeviceMessageHandler {
     @Autowired
     private BinderAwareChannelResolver resolver;
 
-    protected Object newConnectData(String deviceId) {
+    private Object newConnectData(String deviceId) {
         JSONObject object = new JSONObject();
         object.put("deviceId", deviceId);
+        object.put("serverId", sessionManager.getServerId());
         object.put("timestamp", System.currentTimeMillis());
         return object;
     }
 
     @EventListener
+    @Async
     public void handleDeviceRegisterEvent(DeviceOnlineEvent registerEvent) {
         trySendMessageToMq(() -> newConnectData(registerEvent.getSession().getDeviceId()),
                 deviceConnectTopic.getConfigValue(registerEvent.getSession()
@@ -77,6 +84,7 @@ public class FromDeviceMessageHandler {
     }
 
     @EventListener
+    @Async
     public void handleDeviceUnRegisterEvent(DeviceOfflineEvent registerEvent) {
         trySendMessageToMq(() -> newConnectData(registerEvent.getSession().getDeviceId()),
                 deviceDisconnectTopic.getConfigValue(registerEvent.getSession()
@@ -118,25 +126,21 @@ public class FromDeviceMessageHandler {
 
     @EventListener
     public void handleFunctionReplyMessage(DeviceMessageEvent<FunctionInvokeMessageReply> event) {
-        FunctionInvokeMessageReply message = event.getMessage();
+//        FunctionInvokeMessageReply message = event.getMessage();
         DeviceSession session = event.getSession();
-        // 设备配置了转发到指定的topic
-        trySendMessageToMq(event::getMessage,
-                functionReplyTopic.getConfigValue(session.getOperation()).asList(String.class));
-        //判断是否为异步操作，如果不异步的，则需要同步回复结果
-        boolean async = session.getOperation()
-                .getMetadata()
-                .getFunction(message.getFunctionId())
-                .map(FunctionMetadata::isAsync)
-                .orElse(false);
-        //同步操作则直接返回
-        if (!async) {
-            if (StringUtils.isEmpty(message.getMessageId())) {
-                log.warn("消息无messageId:{}", message.toJson());
-                return;
-            }
-            deviceMessageHandler.reply(message);
-        }
+
+        FunctionInvokeMessageReply message = event.getMessage();
+        functionReplyTopic
+                .getConfigValue(session.getOperation()).asList(String.class)
+                .ifPresent(list ->
+                        //判断是否为异步消息
+                        deviceMessageHandler.messageIsAsync(message.getMessageId())
+                                .whenComplete((async, error) -> {
+                                    // 设备配置了转发到指定的topic
+                                    trySendMessageToMq(event::getMessage, Optional.of(list.stream()
+                                            .map(topic -> topic.replace("{function}", message.getFunctionId()))
+                                            .collect(Collectors.toList())));
+                                }));
     }
 
     @EventListener
@@ -146,7 +150,7 @@ public class FromDeviceMessageHandler {
             log.warn("消息无messageId:{}", invokeMessage.toJson());
             return;
         }
-        deviceMessageHandler.reply(invokeMessage);
+        // TODO: 2019-06-05 更多操作
     }
 
     @EventListener
@@ -156,7 +160,7 @@ public class FromDeviceMessageHandler {
             log.warn("消息无messageId:{}", invokeMessage.toJson());
             return;
         }
-        deviceMessageHandler.reply(invokeMessage);
+        // TODO: 2019-06-05 更多操作
     }
 
     @EventListener
@@ -193,13 +197,37 @@ public class FromDeviceMessageHandler {
         }
     }
 
+    private RetryTemplate retryTemplate;
+
+    @PostConstruct
+    public void init() {
+        retryTemplate = new RetryTemplate();
+        FixedBackOffPolicy policy = new FixedBackOffPolicy();
+        policy.setBackOffPeriod(2000L);
+        retryTemplate.setBackOffPolicy(policy);
+        retryTemplate.setRetryPolicy(new SimpleRetryPolicy(3));
+        retryTemplate.setThrowLastExceptionOnExhausted(false);
+    }
 
     private void sendMessageToMq(List<String> topics, String json) {
-        log.info("发送消息到MQ,topics:{} <= {}", topics, json);
         for (String topic : topics) {
-            resolver.resolveDestination(topic)
-                    .send(MessageBuilder.withPayload(json)
-                            .build());
+            boolean success = retryTemplate.execute((context) -> {
+                try {
+                    return resolver
+                            .resolveDestination(topic)
+                            .send(MessageBuilder.withPayload(json).build());
+                } catch (MessageDeliveryException e) {
+                    throw e;
+                } catch (Exception e) {
+                    log.error(e.getMessage(), e);
+                    return false;
+                }
+            });
+            if (success) {
+                log.debug("发送消息到MQ,topics:{} <= {}", topics, json);
+            } else {
+                log.warn("发送消息到MQ失败,topics:{} <= {}", topics, json);
+            }
         }
     }
 }

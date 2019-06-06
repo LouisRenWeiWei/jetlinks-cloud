@@ -3,10 +3,10 @@ package org.jetlinks.cloud.device.gateway;
 import lombok.Getter;
 import lombok.Setter;
 import org.jetlinks.cloud.DeviceConfigKey;
-import org.jetlinks.protocol.device.DeviceInfo;
-import org.jetlinks.protocol.device.DeviceProductInfo;
-import org.jetlinks.protocol.device.DeviceProductOperation;
-import org.jetlinks.registry.api.DeviceRegistry;
+import org.jetlinks.core.device.DeviceInfo;
+import org.jetlinks.core.device.DeviceProductInfo;
+import org.jetlinks.core.device.DeviceProductOperation;
+import org.jetlinks.core.device.registry.DeviceRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -14,6 +14,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cloud.client.SpringCloudApplication;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Component;
 
 /**
@@ -23,6 +24,7 @@ import org.springframework.stereotype.Component;
 @SpringCloudApplication
 @ComponentScan("org.jetlinks.cloud")
 @EnableCaching
+@EnableAsync
 public class DeviceGatewayServiceApplication {
     public static void main(String[] args) {
 
@@ -36,6 +38,10 @@ public class DeviceGatewayServiceApplication {
 
         @Autowired
         private DeviceRegistry registry;
+
+        @Getter
+        @Setter
+        private long initStartWith = 0;
 
         @Getter
         @Setter
@@ -130,25 +136,29 @@ public class DeviceGatewayServiceApplication {
 
             productOperation.put(DeviceConfigKey.functionReplyTopic.getValue(), "[\"device.function.reply\"]");
 
-            //自动注册模拟设备
-            for (int i = 0; i < initDeviceNumber; i++) {
-                DeviceInfo deviceInfo = new DeviceInfo();
-                deviceInfo.setId("test" + i);
-                deviceInfo.setProtocol("jet-links");
-                deviceInfo.setName("test");
-                deviceInfo.setProductId(productInfo.getId());
-                registry.registry(deviceInfo);
-            }
-            //注册20个子设备绑定到test0
-            for (int i = 0; i < 20; i++) {
-                DeviceInfo deviceInfo = new DeviceInfo();
-                deviceInfo.setId("child" + i);
-                deviceInfo.setProtocol("jet-links");
-                deviceInfo.setName("test-child");
-                deviceInfo.setProductId(productInfo.getId());
-                deviceInfo.setParentDeviceId("test0");
-                registry.registry(deviceInfo);
-            }
+            new Thread(() -> {
+                long sum = initStartWith + initDeviceNumber;
+                //自动注册模拟设备
+                for (long i = initStartWith; i < sum; i++) {
+                    DeviceInfo deviceInfo = new DeviceInfo();
+                    deviceInfo.setId("test" + i);
+                    deviceInfo.setProtocol("jet-links");
+                    deviceInfo.setName("test");
+                    deviceInfo.setProductId(productInfo.getId());
+                    registry.registry(deviceInfo);
+                }
+                //注册20个子设备绑定到test0
+                for (int i = 0; i < 20; i++) {
+                    DeviceInfo deviceInfo = new DeviceInfo();
+                    deviceInfo.setId("child" + i);
+                    deviceInfo.setProtocol("jet-links");
+                    deviceInfo.setName("test-child");
+                    deviceInfo.setProductId(productInfo.getId());
+                    deviceInfo.setParentDeviceId("test0");
+                    registry.registry(deviceInfo);
+                }
+            }).start();
+
         }
     }
 

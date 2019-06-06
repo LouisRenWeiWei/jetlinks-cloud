@@ -1,19 +1,16 @@
 package org.jetlinks.cloud.device.gateway.vertx;
 
 import io.vertx.core.Verticle;
-import io.vertx.core.Vertx;
 import io.vertx.mqtt.MqttServerOptions;
 import lombok.Getter;
 import lombok.Setter;
 import org.hswebframework.web.service.GenericsPayloadApplicationEvent;
+import org.jetlinks.core.ProtocolSupports;
+import org.jetlinks.core.device.registry.DeviceRegistry;
 import org.jetlinks.gateway.monitor.GatewayServerMonitor;
 import org.jetlinks.gateway.session.DeviceSessionManager;
 import org.jetlinks.gateway.vertx.mqtt.MqttServer;
-import org.jetlinks.protocol.ProtocolSupports;
-import org.jetlinks.registry.api.DeviceRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.core.env.Environment;
