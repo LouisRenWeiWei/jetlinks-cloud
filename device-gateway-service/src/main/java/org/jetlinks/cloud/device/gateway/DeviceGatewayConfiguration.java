@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jetlinks.cloud.device.gateway.events.DeviceOfflineEvent;
 import org.jetlinks.cloud.device.gateway.events.DeviceOnlineEvent;
 import org.jetlinks.cloud.device.gateway.vertx.VerticleSupplier;
+import org.jetlinks.cloud.device.gateway.vertx.VertxDestroyListener;
 import org.jetlinks.cloud.redis.RedissonClientRepository;
 import org.jetlinks.core.ProtocolSupports;
 import org.jetlinks.core.device.registry.DeviceMessageHandler;
@@ -119,13 +120,16 @@ public class DeviceGatewayConfiguration {
     }
 
     @Slf4j
-    public static class VertxServerInitializer implements CommandLineRunner, DisposableBean {
+    public static class VertxServerInitializer implements CommandLineRunner, DisposableBean ,Ordered{
 
         @Autowired
         private VerticleFactory verticleFactory;
 
         @Autowired
         private List<VerticleSupplier> verticles;
+
+        @Autowired
+        private List<VertxDestroyListener> listeners;
 
         @Autowired
         private Vertx vertx;
@@ -149,13 +153,19 @@ public class DeviceGatewayConfiguration {
 
         @Override
         public void destroy() throws Exception {
-            log.debug("close vertx");
+            listeners.forEach(VertxDestroyListener::vertxDestroyBefore);
+            log.info("close vertx");
             CountDownLatch latch = new CountDownLatch(1);
             vertx.close(result -> {
-                log.debug("close vertx done");
+                log.info("close vertx done");
                 latch.countDown();
             });
             latch.await(30, TimeUnit.SECONDS);
+        }
+
+        @Override
+        public int getOrder() {
+            return 100;
         }
     }
 }

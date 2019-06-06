@@ -8,9 +8,11 @@ import org.jetlinks.cloud.device.gateway.events.ChildDeviceOnlineEvent;
 import org.jetlinks.cloud.device.gateway.events.DeviceOfflineEvent;
 import org.jetlinks.cloud.device.gateway.events.DeviceOnlineEvent;
 import org.jetlinks.cloud.device.gateway.vertx.DeviceMessageEvent;
+import org.jetlinks.cloud.device.gateway.vertx.VertxDestroyListener;
 import org.jetlinks.core.device.DeviceOperation;
 import org.jetlinks.core.device.registry.DeviceMessageHandler;
 import org.jetlinks.core.device.registry.DeviceRegistry;
+import org.jetlinks.core.message.Headers;
 import org.jetlinks.core.message.event.ChildDeviceOfflineMessage;
 import org.jetlinks.core.message.event.ChildDeviceOnlineMessage;
 import org.jetlinks.core.message.event.EventMessage;
@@ -21,27 +23,28 @@ import org.jetlinks.core.metadata.Jsonable;
 import org.jetlinks.gateway.monitor.GatewayServerMonitor;
 import org.jetlinks.gateway.session.DeviceSession;
 import org.jetlinks.gateway.session.DeviceSessionManager;
+import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.stream.annotation.EnableBinding;
 import org.springframework.cloud.stream.binding.BinderAwareChannelResolver;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.Ordered;
-import org.springframework.core.annotation.Order;
 import org.springframework.messaging.MessageDeliveryException;
 import org.springframework.messaging.MessageHandlingException;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.retry.backoff.FixedBackOffPolicy;
 import org.springframework.retry.policy.SimpleRetryPolicy;
 import org.springframework.retry.support.RetryTemplate;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -58,8 +61,7 @@ import static org.jetlinks.cloud.DeviceConfigKey.*;
 @Component
 @Slf4j
 @EnableBinding
-@Order(Ordered.HIGHEST_PRECEDENCE)
-public class FromDeviceMessageHandler {
+public class FromDeviceMessageHandler implements DisposableBean, Ordered, VertxDestroyListener {
 
     @Autowired
     private DeviceMessageHandler deviceMessageHandler;
@@ -85,6 +87,7 @@ public class FromDeviceMessageHandler {
     }
 
     @EventListener
+    @Async
     public void handleDeviceRegisterEvent(DeviceOnlineEvent registerEvent) {
         trySendMessageToMq(() -> newConnectData(registerEvent.getSession().getDeviceId()),
                 deviceConnectTopic.getConfigValue(registerEvent.getSession()
@@ -92,6 +95,7 @@ public class FromDeviceMessageHandler {
     }
 
     @EventListener
+    @Async
     public void handleDeviceUnRegisterEvent(DeviceOfflineEvent registerEvent) {
         trySendMessageToMq(() -> newConnectData(registerEvent.getSession().getDeviceId()),
                 deviceDisconnectTopic.getConfigValue(registerEvent.getSession()
@@ -133,21 +137,34 @@ public class FromDeviceMessageHandler {
 
     @EventListener
     public void handleFunctionReplyMessage(DeviceMessageEvent<FunctionInvokeMessageReply> event) {
-//        FunctionInvokeMessageReply message = event.getMessage();
         DeviceSession session = event.getSession();
 
         FunctionInvokeMessageReply message = event.getMessage();
+
+        Consumer<List<String>> doSendToQueue = (list) -> {
+            // 设备配置了转发到指定的topic
+            trySendMessageToMq(event::getMessage, Optional.of(list.stream()
+                    .map(topic -> topic.replace("{function}", message.getFunctionId()))
+                    .collect(Collectors.toList())));
+        };
+
         functionReplyTopic
                 .getConfigValue(session.getOperation()).asList(String.class)
-                .ifPresent(list ->
-                        //判断是否为异步消息
+                .ifPresent(list -> {
+                    //在DeviceMessageCodec的时候,标记为此消息是异步的
+                    if (Headers.async.get(message).asBoolean().orElse(false)) {
+                        doSendToQueue.accept(list);
+                    } else {
+                        //判断是否有其他地方标记为异步(一般是消息发送方标记)
                         deviceMessageHandler.messageIsAsync(message.getMessageId())
                                 .whenComplete((async, error) -> {
-                                    // 设备配置了转发到指定的topic
-                                    trySendMessageToMq(event::getMessage, Optional.of(list.stream()
-                                            .map(topic -> topic.replace("{function}", message.getFunctionId()))
-                                            .collect(Collectors.toList())));
-                                }));
+                                    if (Boolean.TRUE.equals(async)) {
+                                        // 设备配置了转发到指定的topic
+                                        doSendToQueue.accept(list);
+                                    }
+                                });
+                    }
+                });
     }
 
     @EventListener
@@ -220,19 +237,18 @@ public class FromDeviceMessageHandler {
             JSONObject json = new JSONObject();
             json.put("serverId", serverId);
             json.put("timestamp", System.currentTimeMillis());
+            log.info("设备管理服务[{}]已下线", serverId);
             sendMessageToMq(Collections.singletonList("device.gateway.server.down"), json.toJSONString());
         });
     }
 
     private boolean running = true;
 
-    @PreDestroy
-    public void shutdown() {
-        running = false;
-    }
-
     private void sendMessageToMq(List<String> topics, String json) {
         for (String topic : topics) {
+            if (!running) {
+                return;
+            }
             boolean success = retryTemplate.execute((context) -> {
                 try {
                     if (!running) {
@@ -257,5 +273,21 @@ public class FromDeviceMessageHandler {
                 log.warn("发送消息到MQ失败,topics:{} <= {}", topics, json);
             }
         }
+    }
+
+    @Override
+    public void destroy() {
+        log.info("shutdown message event handler");
+        running = false;
+    }
+
+    @Override
+    public void vertxDestroyBefore() {
+        running = false;
+    }
+
+    @Override
+    public int getOrder() {
+        return 0;
     }
 }
