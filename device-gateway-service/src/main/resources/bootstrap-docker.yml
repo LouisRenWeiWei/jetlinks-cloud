@@ -3,8 +3,8 @@ spring:
     nacos:
       config:
         server-addr: nacos-server:8848
-        file-extension: yaml
-        shared-dataids: common-config.yaml
+        file-extension: yml
+        shared-dataids: common-config.yml
         refreshable-dataids: device-gateway-service.yml
       discovery:
         endpoint: device-gateway-service
