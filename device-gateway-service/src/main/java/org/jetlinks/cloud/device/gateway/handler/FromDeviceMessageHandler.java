@@ -193,10 +193,6 @@ public class FromDeviceMessageHandler implements DisposableBean, Ordered, VertxD
         // 设备配置了转发到指定的topic
         trySendMessageToMq(event::getMessage,
                 eventTopic.getConfigValue(session.getOperation(), event.getMessage().getEvent()).asList(String.class));
-
-        // 设备配置了转发到指定的topic
-        trySendMessageToMq(event::getMessage,
-                eventTopic.getConfigValue(session.getOperation()).asList(String.class));
     }
 
 
