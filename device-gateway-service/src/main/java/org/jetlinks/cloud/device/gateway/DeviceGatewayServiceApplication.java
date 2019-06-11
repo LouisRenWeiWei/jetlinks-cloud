@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.jetlinks.cloud.DeviceConfigKey;
 import org.jetlinks.core.device.DeviceInfo;
+import org.jetlinks.core.device.DeviceOperation;
 import org.jetlinks.core.device.DeviceProductInfo;
 import org.jetlinks.core.device.DeviceProductOperation;
 import org.jetlinks.core.device.registry.DeviceRegistry;
@@ -131,8 +132,6 @@ public class DeviceGatewayServiceApplication {
             productOperation.put(DeviceConfigKey.childDeviceDisconnectTopic.getValue(), "[\"device.child.disconnect\"]");
             productOperation.put(DeviceConfigKey.functionReplyTopic.getValue(), "[\"device.function.reply\"]");
 
-            productOperation.put("secureId", "test");
-            productOperation.put("secureKey", "test");
 
             productOperation.put(DeviceConfigKey.functionReplyTopic.getValue(), "[\"device.function.reply\"]");
 
@@ -145,7 +144,11 @@ public class DeviceGatewayServiceApplication {
                     deviceInfo.setProtocol("jet-links");
                     deviceInfo.setName("test");
                     deviceInfo.setProductId(productInfo.getId());
-                    registry.registry(deviceInfo);
+
+                    DeviceOperation operation=registry.registry(deviceInfo);
+                    operation.put("secureId", "test");
+                    operation.put("secureKey", "test");
+
                 }
                 //注册20个子设备绑定到test0
                 for (int i = 0; i < 20; i++) {
