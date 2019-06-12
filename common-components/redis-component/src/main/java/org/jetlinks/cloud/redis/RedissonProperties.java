@@ -46,13 +46,15 @@ public class RedissonProperties {
         if (this.password == null) {
             this.password = defaultProperties.password;
         }
-        Config config = type.parse(this);
 
+        return  type.parse(this);
+    }
+
+    private <T> T copyConfig(T object) {
         if (this.config != null) {
-            FastBeanCopier.copy(this.config, config);
+            FastBeanCopier.copy(this.config, object);
         }
-
-        return config;
+        return object;
     }
 
     public enum Type {
@@ -65,8 +67,14 @@ public class RedissonProperties {
                         .setPassword(properties.getPassword())
                         .setConnectionPoolSize(properties.getConnectionPoolSize())
                         .setConnectTimeout(properties.getConnectionTimeout())
+                        .setKeepAlive(true)
+                        .setRetryInterval(100)
+                        .setRetryAttempts(500)
                         .setTimeout(properties.timeout)
                         .setDatabase(properties.getDatabase());
+                properties.copyConfig(serversConfig);
+
+
                 if (log.isInfoEnabled()) {
                     log.info("redisson SingleServerConfig config:\n{}", JSON.toJSONString(serversConfig, SerializerFeature.PrettyFormat));
                 }
@@ -87,8 +95,13 @@ public class RedissonProperties {
                         .setSlaveConnectionPoolSize(properties.getConnectionPoolSize())
                         .setConnectTimeout(properties.getConnectionTimeout())
                         .setTimeout(properties.timeout)
+                        .setKeepAlive(true)
+                        .setRetryInterval(100)
+                        .setRetryAttempts(500)
                         .setPassword(properties.getPassword())
                         .setDatabase(properties.getDatabase());
+                properties.copyConfig(serversConfig);
+
                 if (log.isInfoEnabled()) {
                     log.info("redisson MasterSlaveServersConfig config:\n{}", JSON.toJSONString(serversConfig, SerializerFeature.PrettyFormat));
                 }
@@ -111,9 +124,13 @@ public class RedissonProperties {
                         .setSlaveConnectionPoolSize(properties.getConnectionPoolSize())
                         .setConnectTimeout(properties.getConnectionTimeout())
                         .setTimeout(properties.timeout)
+                        .setRetryInterval(100)
+                        .setRetryAttempts(500)
                         .setMasterName(properties.getMasterName())
                         .setPassword(properties.getPassword())
                         .setDatabase(properties.getDatabase());
+                properties.copyConfig(sentinelServersConfig);
+
                 if (log.isInfoEnabled()) {
                     log.info("redisson SentinelServersConfig config:\n{}", JSON.toJSONString(sentinelServersConfig, SerializerFeature.PrettyFormat));
                 }
