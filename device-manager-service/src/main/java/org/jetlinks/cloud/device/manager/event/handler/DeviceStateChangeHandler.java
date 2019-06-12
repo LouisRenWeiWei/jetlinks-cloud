@@ -49,9 +49,12 @@ public class DeviceStateChangeHandler implements CommandLineRunner {
             factory.<String, Integer>create()
                     .input(input -> DeviceStateChangeHandler.this.input = input)
                     .batching(new LocalCacheBatching<>(getBatchSize()))//批量缓冲
-                    .handle((list, output) -> output.write(deviceInstanceService.syncState(list, false)))
+                    .handle((list, output) -> {
+                        log.info("开始同步设备状态,数量:{}",list.size());
+                        output.write(deviceInstanceService.syncState(list, false));
+                    })
                     .build()
-                    .output(total -> log.debug("同步设备状态数量:{}", total))
+                    .output(total -> log.info("同步设备状态成功数量:{}", total))
                     .start();
         }
     }
