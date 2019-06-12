@@ -26,29 +26,39 @@ public class DeviceStateChangeHandler implements CommandLineRunner {
     @Autowired
     private LocalDeviceInstanceService deviceInstanceService;
 
-    @Value("${device.state.sync.batch-size:200}")
-    private int batchSize = 200;
+    @Value("${device.state.sync.batch-size:500}")
+    private int batchSize = 500;
 
     private volatile Consumer<String> input;
 
     @EventListener
     public void handleDeviceOnlineOfflineEvent(DeviceOnlineOfflineEvent event) {
         if (StringUtils.hasText(event.getDeviceId())) {
+            if (input == null) {
+                initInputConsumer();
+            }
             input.accept(event.getDeviceId());
         } else {
             log.warn("错误的设备上下线消息:{}", JSON.toJSONString(event));
         }
     }
 
+
+    private synchronized void initInputConsumer() {
+        if (input == null) {
+            factory.<String, Integer>create()
+                    .input(input -> DeviceStateChangeHandler.this.input = input)
+                    .batching(new LocalCacheBatching<>(getBatchSize()))//批量缓冲
+                    .handle((list, output) -> output.write(deviceInstanceService.syncState(list, false)))
+                    .build()
+                    .output(total -> log.debug("同步设备状态数量:{}", total))
+                    .start();
+        }
+    }
+
     @Override
     public void run(String... strings) {
-        factory.<String, Integer>create()
-                .input(input -> DeviceStateChangeHandler.this.input = input)
-                .batching(new LocalCacheBatching<>(getBatchSize()))//批量缓冲
-                .handle((list, output) -> output.write(deviceInstanceService.syncState(list, false)))
-                .build()
-                .output(total -> log.debug("同步设备状态数量:{}", total))
-                .start();
+        initInputConsumer();
     }
 
     public int getBatchSize() {
