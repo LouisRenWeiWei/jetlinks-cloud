@@ -75,8 +75,7 @@ public class DeviceGatewayConfiguration {
 
     @Bean(initMethod = "init", destroyMethod = "shutdown")
     @Order(Ordered.HIGHEST_PRECEDENCE)
-    public DefaultDeviceSessionManager deviceSessionManager(Environment environment,
-                                                            ProtocolSupports protocolSupports,
+    public DefaultDeviceSessionManager deviceSessionManager( ProtocolSupports protocolSupports,
                                                             DeviceRegistry registry,
                                                             DeviceMessageHandler deviceMessageHandler,
                                                             GatewayServerMonitor gatewayServerMonitor,
@@ -84,7 +83,6 @@ public class DeviceGatewayConfiguration {
                                                             DeviceSessionManagerProperties sessionManagerProperties,
                                                             ScheduledExecutorService executorService) {
         DefaultDeviceSessionManager sessionManager = new DefaultDeviceSessionManager();
-        sessionManager.setServerId(environment.getProperty("gateway.server-id"));
         sessionManager.setProtocolSupports(protocolSupports);
         sessionManager.setDeviceRegistry(registry);
         sessionManager.setExecutorService(executorService);

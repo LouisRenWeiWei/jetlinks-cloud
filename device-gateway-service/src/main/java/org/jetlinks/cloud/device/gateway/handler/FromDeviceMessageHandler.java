@@ -81,7 +81,7 @@ public class FromDeviceMessageHandler implements DisposableBean, Ordered, VertxD
     private Object newConnectData(String deviceId) {
         JSONObject object = new JSONObject();
         object.put("deviceId", deviceId);
-        object.put("serverId", sessionManager.getServerId());
+        object.put("serverId", gatewayServerMonitor.getCurrentServerInfo().getId());
         object.put("timestamp", System.currentTimeMillis());
         return object;
     }
@@ -109,7 +109,7 @@ public class FromDeviceMessageHandler implements DisposableBean, Ordered, VertxD
         // TODO: 19-3-21 子设备认证
 
         DeviceOperation operation = registry.getDevice(message.getChildDeviceId());
-        operation.online(sessionManager.getServerId(), session.getId());
+        operation.online(gatewayServerMonitor.getCurrentServerInfo().getId(), session.getId());
 
         trySendMessageToMq(() -> new ChildDeviceOnlineEvent(session.getDeviceId(), message.getChildDeviceId(), System.currentTimeMillis()),
                 childDeviceConnectTopic.getConfigValue(session.getOperation()).asList(String.class));
