@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @RequestMapping("/dns")
 @RestController
@@ -36,6 +37,21 @@ public class GateWayServerDnsController {
             @Override
             List<String> select(List<GatewayServerInfo> serverInfo, Transport transport) {
                 return serverInfo.get(RandomUtils.nextInt(serverInfo.size()))
+                        .getTransportHosts(transport);
+            }
+        },
+        //轮询
+        round() {
+            AtomicInteger next = new AtomicInteger(0);
+
+            @Override
+            List<String> select(List<GatewayServerInfo> serverInfo, Transport transport) {
+                int now = next.incrementAndGet();
+
+                if (now >= serverInfo.size()) {
+                    next.set(now = 0);
+                }
+                return serverInfo.get(Math.min(serverInfo.size() - 1, now))
                         .getTransportHosts(transport);
             }
         },
