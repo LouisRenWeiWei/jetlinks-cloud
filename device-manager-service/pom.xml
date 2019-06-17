@@ -69,7 +69,7 @@
         <dependency>
             <groupId>org.hswebframework</groupId>
             <artifactId>hsweb-task-core</artifactId>
-            <version>1.0.0-RC</version>
+            <version>1.0.0-RC2-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.hswebframework.web</groupId>
