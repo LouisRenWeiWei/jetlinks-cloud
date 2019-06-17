@@ -15,8 +15,11 @@ import org.springframework.transaction.support.TransactionSynchronizationAdapter
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.CollectionUtils;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static java.util.Optional.ofNullable;
 
@@ -67,25 +70,25 @@ public class LocalDeviceInstanceService extends GenericEntityService<DeviceInsta
     public int syncState(List<String> deviceId, boolean force) {
         int total = 0;
         try {
-            Map<Byte, Set<String>> group = new ConcurrentHashMap<>();
 
-            deviceId.parallelStream()
-                    .forEach(device -> {
+            Map<Byte, Set<String>> group = deviceId.parallelStream()
+                    .map(device -> {
                         DeviceOperation operation = registry.getDevice(device);
                         if (force) {
                             //检查真实状态
                             operation.checkState();
                         }
-                        group.computeIfAbsent(operation.getState(), k -> new HashSet<>())
-                                .add(device);
-                    });
+                        return operation;
+                    })
+                    .collect(Collectors.groupingBy(DeviceOperation::getState,
+                            Collectors.mapping(DeviceOperation::getDeviceId, Collectors.toSet())));
 
 
             //批量更新分组结果
             for (Map.Entry<Byte, Set<String>> entry : group.entrySet()) {
                 byte state = entry.getKey();
                 Set<String> deviceIdList = entry.getValue();
-                if(logger.isDebugEnabled()){
+                if (logger.isDebugEnabled()) {
                     logger.debug("同步设备状态:{} 数量: {}", state, deviceIdList.size());
                 }
                 if (CollectionUtils.isEmpty(deviceIdList)) {
