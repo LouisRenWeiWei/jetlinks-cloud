@@ -3,8 +3,6 @@ package org.jetlinks.cloud.device.manager.event.handler;
 
 import com.alibaba.fastjson.JSON;
 import lombok.extern.slf4j.Slf4j;
-import org.hswebframework.task.batch.local.LocalBatchTaskBuilderFactory;
-import org.hswebframework.task.batch.local.LocalCacheBatching;
 import org.jetlinks.cloud.device.manager.event.DeviceOnlineOfflineEvent;
 import org.jetlinks.cloud.device.manager.service.LocalDeviceInstanceService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,31 +11,37 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.FluxSink;
 
-import java.util.function.Consumer;
+import java.time.Duration;
 
 
 @Component
 @Slf4j
 public class DeviceStateChangeHandler implements CommandLineRunner {
 
-    private LocalBatchTaskBuilderFactory factory = new LocalBatchTaskBuilderFactory();
 
     @Autowired
     private LocalDeviceInstanceService deviceInstanceService;
 
-    @Value("${device.state.sync.batch-size:500}")
-    private int batchSize = 500;
+    @Value("${device.state.sync.buffer-size:500}")
+    private int bufferSize = 500;
 
-    private volatile Consumer<String> input;
+    @Value("${device.state.sync.buffer-timeout:2}")
+    private int bufferTimeout = 2;
+
+    private volatile FluxSink<String> sink;
 
     @EventListener
     public void handleDeviceOnlineOfflineEvent(DeviceOnlineOfflineEvent event) {
         if (StringUtils.hasText(event.getDeviceId())) {
-            if (input == null) {
+            if (sink == null) {
                 initInputConsumer();
             }
-            input.accept(event.getDeviceId());
+            if (sink != null) {
+                sink.next(event.getDeviceId());
+            }
         } else {
             log.warn("错误的设备上下线消息:{}", JSON.toJSONString(event));
         }
@@ -45,17 +49,10 @@ public class DeviceStateChangeHandler implements CommandLineRunner {
 
 
     private synchronized void initInputConsumer() {
-        if (input == null) {
-            factory.<String, Integer>create()
-                    .input(input -> DeviceStateChangeHandler.this.input = input)
-                    .batching(new LocalCacheBatching<>(getBatchSize()))//批量缓冲
-                    .handle((list, output) -> {
-                        log.info("开始同步设备状态,数量:{}",list.size());
-                        output.write(deviceInstanceService.syncState(list, false));
-                    })
-                    .build()
-                    .output(total -> log.info("同步设备状态成功数量:{}", total))
-                    .start();
+        if (sink == null) {
+            Flux.<String>create(fluxSink -> this.sink = fluxSink)
+                    .bufferTimeout(bufferSize, Duration.ofSeconds(2))
+                    .subscribe(list -> deviceInstanceService.syncState(list, false));
         }
     }
 
@@ -64,11 +61,4 @@ public class DeviceStateChangeHandler implements CommandLineRunner {
         initInputConsumer();
     }
 
-    public int getBatchSize() {
-        return batchSize;
-    }
-
-    public void setBatchSize(int batchSize) {
-        this.batchSize = batchSize;
-    }
 }
