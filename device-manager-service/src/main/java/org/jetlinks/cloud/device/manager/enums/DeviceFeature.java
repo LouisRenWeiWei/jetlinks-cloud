@@ -5,7 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.hswebframework.web.dict.EnumDict;
 import org.jetlinks.cloud.DeviceConfigKey;
-import org.jetlinks.core.device.Configurable;
+import org.jetlinks.core.Configurable;
 
 import java.util.Collections;
 
