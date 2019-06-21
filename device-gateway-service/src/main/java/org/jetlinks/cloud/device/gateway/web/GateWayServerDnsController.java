@@ -29,6 +29,7 @@ public class GateWayServerDnsController {
         first() {
             @Override
             List<String> select(List<GatewayServerInfo> serverInfo, Transport transport) {
+
                 return serverInfo.get(0).getTransportHosts(transport);
             }
         },
@@ -73,6 +74,13 @@ public class GateWayServerDnsController {
                 }
                 return target.getTransportHosts(transport);
             }
+        },
+        //当前服务器
+        current() {
+            @Override
+            List<String> select(List<GatewayServerInfo> serverInfo, Transport transport) {
+                throw new UnsupportedOperationException();
+            }
         };
 
         abstract List<String> select(List<GatewayServerInfo> serverInfo, Transport transport);
@@ -86,6 +94,10 @@ public class GateWayServerDnsController {
                 .filter(e -> e.name().toUpperCase().equals(transport.toUpperCase()))
                 .findAny()
                 .orElseThrow(() -> new IllegalArgumentException("不支持的协议:" + transport));
+
+        if (selector == Selector.current) {
+            return ResponseMessage.ok(serverMonitor.getCurrentServerInfo().getTransportHosts(_transport));
+        }
 
         List<GatewayServerInfo> allServers = serverMonitor.getAllServerInfo();
 
