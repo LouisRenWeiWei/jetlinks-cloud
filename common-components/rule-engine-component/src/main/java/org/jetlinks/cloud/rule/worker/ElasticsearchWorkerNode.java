@@ -1,6 +1,5 @@
 package org.jetlinks.cloud.rule.worker;
 
-import com.google.gson.Gson;
 import io.searchbox.action.Action;
 import io.searchbox.client.JestClient;
 import io.searchbox.client.JestClientFactory;
@@ -12,6 +11,7 @@ import io.searchbox.core.Index;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpHost;
 import org.hswebframework.web.ExpressionUtils;
 import org.hswebframework.web.id.IDGenerator;
@@ -24,14 +24,21 @@ import org.springframework.boot.autoconfigure.elasticsearch.jest.JestProperties;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
+import reactor.core.Disposable;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.FluxSink;
 
+import java.time.Duration;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 @Component
+@Slf4j
 public class ElasticsearchWorkerNode extends AbstractExecutableRuleNodeFactoryStrategy<ElasticsearchWorkerNode.Config> {
 
     @Override
@@ -48,32 +55,37 @@ public class ElasticsearchWorkerNode extends AbstractExecutableRuleNodeFactorySt
     public Function<RuleData, CompletionStage<Object>> createExecutor(ExecutionContext context, Config config) {
         JestClient client = config.createClient();
 
-        context.onStop(client::shutdownClient);
+
+        AtomicReference<FluxSink<RuleData>> sinkReference = new AtomicReference<>();
+
+        Disposable disposable = Flux.create(sinkReference::set)
+                .bufferTimeout(config.getBufferSize(), Duration.ofSeconds(2))
+                .subscribe(list -> client.executeAsync(config.createAction(list), new JestResultHandler<JestResult>() {
+                    @Override
+                    public void completed(JestResult jestResult) {
+                        if (!jestResult.isSucceeded()) {
+                            context.logger().error("保存数据到ES失败:{}", jestResult.getJsonString());
+                            context.onError(RuleData.create(list), new RuntimeException(jestResult.getErrorMessage()));
+                        } else if (log.isInfoEnabled()) {
+                            log.info("保存规则数据到ES成功,数量:{}", list.size());
+                        }
+                    }
+
+                    @Override
+                    public void failed(Exception e) {
+                        context.logger().error("保存数据到ES失败", e);
+                        context.onError(RuleData.create(list), e);
+                    }
+                }));
+        context.onStop(() -> {
+            sinkReference.get().complete();
+            disposable.dispose();
+            client.shutdownClient();
+        });
 
         return ruleData -> {
-            CompletableFuture<Object> future = new CompletableFuture<>();
-
-            client.executeAsync(config.createAction(ruleData), new JestResultHandler<JestResult>() {
-                @Override
-                public void completed(JestResult jestResult) {
-                    if (!jestResult.isSucceeded()) {
-                        context.logger()
-                                .error("保存数据到ES失败:{}", jestResult.getJsonString());
-                        future.completeExceptionally(new IllegalStateException(jestResult.getErrorMessage()));
-                    } else {
-                        //返回原数据
-                        future.complete(ruleData.newData(ruleData.getData()));
-                    }
-                }
-
-                @Override
-                public void failed(Exception e) {
-                    context.logger()
-                            .error("保存数据到ES失败", e);
-                    future.completeExceptionally(e);
-                }
-            });
-            return future;
+            sinkReference.get().next(ruleData);
+            return CompletableFuture.completedFuture(ruleData);
         };
     }
 
@@ -87,6 +99,9 @@ public class ElasticsearchWorkerNode extends AbstractExecutableRuleNodeFactorySt
         private String index;
 
         private String type;
+
+        private int bufferSize = 100;
+
 
         protected HttpClientConfig createHttpClientConfig() {
             HttpClientConfig.Builder builder = new HttpClientConfig.Builder(
@@ -122,28 +137,30 @@ public class ElasticsearchWorkerNode extends AbstractExecutableRuleNodeFactorySt
             return ExpressionUtils.analytical(p, data, "spel");
         }
 
-        public Action<?> createAction(RuleData ruleData) {
+        public Action<?> createAction(Collection<RuleData> ruleDatas) {
             Bulk.Builder bulkBuilder = new Bulk.Builder();
 
-            ruleData.acceptMap(map -> {
-                String indexId = id;
-                if (StringUtils.isEmpty(indexId)) {
-                    indexId = IDGenerator.MD5.generate();
-                } else {
-                    indexId = Optional.ofNullable(map.get(getId())).map(String::valueOf).orElseGet(() -> getExpression(getId(), map));
-                }
-                Index index = new Index.Builder(map)
-                        .id(indexId)
-                        .index(Optional.ofNullable(map.get(getIndex())).map(String::valueOf).orElseGet(() -> getExpression(getIndex(), map)))
-                        .type(Optional.ofNullable(map.get(getType())).map(String::valueOf).orElseGet(() -> getExpression(getType(), map)))
-                        .build();
+            for (RuleData ruleData : ruleDatas) {
+                ruleData.acceptMap(map -> {
+                    String indexId = id;
+                    if (StringUtils.isEmpty(indexId)) {
+                        indexId = IDGenerator.MD5.generate();
+                    } else {
+                        indexId = Optional.ofNullable(map.get(getId())).map(String::valueOf).orElseGet(() -> getExpression(getId(), map));
+                    }
+                    Index index = new Index.Builder(map)
+                            .id(indexId)
+                            .index(Optional.ofNullable(map.get(getIndex())).map(String::valueOf).orElseGet(() -> getExpression(getIndex(), map)))
+                            .type(Optional.ofNullable(map.get(getType())).map(String::valueOf).orElseGet(() -> getExpression(getType(), map)))
+                            .build();
 
-                bulkBuilder.addAction(index);
-            });
+                    bulkBuilder.addAction(index);
+                });
+            }
 
             return bulkBuilder.build();
-
         }
+
     }
 
 }

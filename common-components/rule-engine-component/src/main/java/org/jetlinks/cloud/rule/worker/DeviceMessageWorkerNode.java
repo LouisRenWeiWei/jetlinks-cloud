@@ -47,7 +47,13 @@ public class DeviceMessageWorkerNode extends AbstractExecutableRuleNodeFactorySt
             CompletableFuture<Object> future = new CompletableFuture<>();
             try {
                 ruleData.acceptMap(data -> {
-                    DeviceOperation operation = deviceRegistry.getDevice(config.getRealDeviceId(data));
+                    String deviceId = config.getRealDeviceId(data);
+
+                    DeviceOperation operation = deviceRegistry.getDevice(deviceId);
+                    if (operation == null) {
+                        future.completeExceptionally(new NullPointerException("设备[" + deviceId + "]不存在"));
+                        return;
+                    }
                     config.send(operation, data)
                             .whenComplete((reply, throwable) -> {
                                 if (throwable != null) {
@@ -83,6 +89,8 @@ public class DeviceMessageWorkerNode extends AbstractExecutableRuleNodeFactorySt
 
         private List<String> properties;
 
+        private int timeoutSeconds = 15;
+
         @SneakyThrows
         private String getRealDeviceId(Map<String, Object> ruleData) {
             String id = (String) ruleData.get(deviceId);
@@ -105,6 +113,7 @@ public class DeviceMessageWorkerNode extends AbstractExecutableRuleNodeFactorySt
                 return operation.messageSender()
                         .invokeFunction(config.getFunction())
                         .setParameter(ruleData)
+                        .timeout(config.getTimeoutSeconds())
                         .send();
             }
         }, readProperty {
@@ -113,6 +122,7 @@ public class DeviceMessageWorkerNode extends AbstractExecutableRuleNodeFactorySt
                 return operation.messageSender()
                         .readProperty()
                         .read(config.getProperties())
+                        .timeout(config.getTimeoutSeconds())
                         .send();
             }
         };

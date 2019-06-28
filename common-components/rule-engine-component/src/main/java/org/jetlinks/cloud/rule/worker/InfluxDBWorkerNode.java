@@ -3,6 +3,7 @@ package org.jetlinks.cloud.rule.worker;
 import com.alibaba.fastjson.JSON;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 import org.hswebframework.utils.StringUtils;
 import org.hswebframework.utils.time.DateFormatter;
 import org.hswebframework.web.ExpressionUtils;
@@ -19,12 +20,18 @@ import org.jetlinks.rule.engine.executor.supports.RuleNodeConfig;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
+import reactor.core.Disposable;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.FluxSink;
 
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * @author zhouhao
@@ -32,6 +39,7 @@ import java.util.function.Function;
  */
 @Component
 @ConditionalOnClass(InfluxDB.class)
+@Slf4j
 public class InfluxDBWorkerNode extends AbstractExecutableRuleNodeFactoryStrategy<InfluxDBWorkerNode.Config> {
 
     @Override
@@ -49,16 +57,32 @@ public class InfluxDBWorkerNode extends AbstractExecutableRuleNodeFactoryStrateg
         config.init();
 
         InfluxDB influxDB = config.newInfluxDB();
-        context.onStop(influxDB::close);
+
+        AtomicReference<FluxSink<RuleData>> sinkReference = new AtomicReference<>();
+
+        Disposable disposable = Flux.create(sinkReference::set)
+                .bufferTimeout(config.getBufferSize(), Duration.ofSeconds(2))
+                .subscribe(list -> {
+                    try {
+                        influxDB.write(config.parsePoint(context, list));
+                        if (log.isInfoEnabled()) {
+                            log.info("保存规则数据到InfluxDB成功,数量:{}", list.size());
+                        }
+                    } catch (Exception e) {
+                        context.onError(RuleData.create(list), e);
+                    }
+                });
+
+        context.onStop(() -> {
+            sinkReference.get().complete();
+            disposable.dispose();
+            influxDB.close();
+        });
+
         return data -> {
-            CompletableFuture<Object> future = new CompletableFuture<>();
-            try {
-                influxDB.write(config.parsePoint(context, data));
-                future.complete(data.getData());
-            } catch (Throwable e) {
-                future.completeExceptionally(e);
-            }
-            return future;
+            sinkReference.get().next(data);
+
+            return CompletableFuture.completedFuture(data);
         };
     }
 
@@ -69,6 +93,7 @@ public class InfluxDBWorkerNode extends AbstractExecutableRuleNodeFactoryStrateg
         private String measurement;
 
         private String timeField = "now";
+
 
         private Map<String, String> fieldMapping = new HashMap<>();
 
@@ -137,6 +162,8 @@ public class InfluxDBWorkerNode extends AbstractExecutableRuleNodeFactoryStrateg
 
         private NodeType nodeType;
 
+        private int bufferSize = 200;
+
         public InfluxDB newInfluxDB() {
             Assert.hasText(url, "url");
             Assert.hasText(username, "username");
@@ -153,6 +180,16 @@ public class InfluxDBWorkerNode extends AbstractExecutableRuleNodeFactoryStrateg
                 converts = JSON.parseArray(convertsJson, PointConvert.class);
                 converts.forEach(PointConvert::validate);
             }
+        }
+
+        public BatchPoints parsePoint(ExecutionContext context, Collection<RuleData> data) {
+            BatchPoints.Builder points = BatchPoints.builder();
+
+            List<Point> pointList = data.parallelStream()
+                    .flatMap(ruleData -> converts.stream().map(convert -> convert.convert(context, ruleData)))
+                    .collect(Collectors.toList());
+            points.points(pointList);
+            return points.build();
         }
 
         public BatchPoints parsePoint(ExecutionContext context, RuleData data) {

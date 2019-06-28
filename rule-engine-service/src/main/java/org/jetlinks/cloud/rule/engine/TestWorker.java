@@ -18,6 +18,6 @@ public class TestWorker {
 
     public void handlerReadFail(RuleData ruleData){
 
-        log.warn("读取设备属性错误:{}",ruleData.toString());
+        log.debug("读取设备属性错误:{}",ruleData.toString());
     }
 }

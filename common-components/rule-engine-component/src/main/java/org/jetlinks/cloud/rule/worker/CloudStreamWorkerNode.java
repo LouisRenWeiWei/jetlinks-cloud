@@ -4,32 +4,33 @@ import com.alibaba.fastjson.JSON;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.jetlinks.rule.engine.api.Logger;
 import org.jetlinks.rule.engine.api.RuleData;
 import org.jetlinks.rule.engine.api.executor.ExecutableRuleNode;
 import org.jetlinks.rule.engine.api.executor.ExecutionContext;
 import org.jetlinks.rule.engine.api.model.NodeType;
 import org.jetlinks.rule.engine.executor.AbstractExecutableRuleNodeFactoryStrategy;
 import org.jetlinks.rule.engine.executor.supports.RuleNodeConfig;
+import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.cloud.stream.annotation.EnableBinding;
+import org.springframework.cloud.stream.binding.AbstractBindingTargetFactory;
 import org.springframework.cloud.stream.binding.BinderAwareChannelResolver;
 import org.springframework.cloud.stream.binding.BindingService;
-import org.springframework.messaging.*;
+import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.MessageHandler;
+import org.springframework.messaging.SubscribableChannel;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -49,6 +50,14 @@ public class CloudStreamWorkerNode extends AbstractExecutableRuleNodeFactoryStra
     @Autowired
     private BindingService bindingService;
 
+    @Autowired
+    private ConfigurableListableBeanFactory beanFactory;
+
+    private Map<String, MessageChannel> channelMap = new ConcurrentHashMap<>();
+
+    @Autowired
+    private AbstractBindingTargetFactory<? extends MessageChannel> bindingTargetFactory;
+
     @Override
     public Config newConfig() {
         return new Config();
@@ -67,6 +76,24 @@ public class CloudStreamWorkerNode extends AbstractExecutableRuleNodeFactoryStra
     public Function<RuleData, CompletionStage<Object>> createExecutor(ExecutionContext context, Config config) {
 
         throw new UnsupportedOperationException();
+    }
+
+    public MessageChannel getMessageChannel(String name, boolean output) {
+
+
+        return channelMap.computeIfAbsent(name, channelName -> {
+            try {
+                return this.beanFactory.getBean(name, MessageChannel.class);
+            } catch (BeansException ignore) {
+
+            }
+            MessageChannel channel = output ? this.bindingTargetFactory.createOutput(channelName)
+                    : this.bindingTargetFactory.createInput(channelName);
+
+            this.beanFactory.registerSingleton(channelName, channel);
+
+            return (MessageChannel) this.beanFactory.initializeBean(channel, channelName);
+        });
     }
 
     private Object convertPayload(Object payload) {
@@ -114,8 +141,10 @@ public class CloudStreamWorkerNode extends AbstractExecutableRuleNodeFactoryStra
                 }
             };
             handlerMap.put(hash, handler);
+            bindingService.unbindProducers(topic);
             channel.subscribe(handler);
             bindingService.bindConsumer(channel, topic);
+
         }
 
     }
@@ -129,6 +158,7 @@ public class CloudStreamWorkerNode extends AbstractExecutableRuleNodeFactoryStra
         if (!CollectionUtils.isEmpty(consumers)) {
             consumers.remove(consumerHash);
         }
+
         if (CollectionUtils.isEmpty(consumers)) {
             bindingService.unbindConsumers(topic);
             MessageHandler handler = handlerMap.remove(hash);
@@ -141,8 +171,8 @@ public class CloudStreamWorkerNode extends AbstractExecutableRuleNodeFactoryStra
 
     @Override
     protected ExecutableRuleNode doCreate(Config config) {
-        MessageChannel messageChannel = resolver.resolveDestination(config.getTopic());
         String topic = config.getTopic();
+        MessageChannel messageChannel = getMessageChannel(topic, config.getType() == Type.Producer);
 
         AtomicBoolean started = new AtomicBoolean();
         return context -> {

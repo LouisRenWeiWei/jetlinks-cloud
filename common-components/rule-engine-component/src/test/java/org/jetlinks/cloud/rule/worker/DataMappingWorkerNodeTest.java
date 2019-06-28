@@ -17,8 +17,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import static org.junit.Assert.*;
-
 /**
  * @author zhouhao
  * @since 1.0.0
@@ -49,10 +47,6 @@ public class DataMappingWorkerNodeTest {
             @Override
             public Input getInput() {
                 return new Input() {
-                    @Override
-                    public void accept(Consumer<RuleData> accept) {
-
-                    }
 
                     @Override
                     public boolean acceptOnce(Consumer<RuleData> accept) {

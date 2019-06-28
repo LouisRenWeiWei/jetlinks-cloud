@@ -35,11 +35,15 @@ spring:
         consumer:
           header-mode: raw
           content-type: application/json
+
         producer:
           header-mode: raw
           content-type: application/json
-
-
+      rabbit:
+        bindings:
+          default:
+            consumer:
+              concurrency: 3
 hsweb:
   app:
     name: 规则引擎服务
