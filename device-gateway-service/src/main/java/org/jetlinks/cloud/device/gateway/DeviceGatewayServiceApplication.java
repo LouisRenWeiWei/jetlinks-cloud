@@ -2,6 +2,7 @@ package org.jetlinks.cloud.device.gateway;
 
 import lombok.Getter;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 import org.jetlinks.cloud.DeviceConfigKey;
 import org.jetlinks.core.device.DeviceInfo;
 import org.jetlinks.core.device.DeviceOperation;
@@ -17,6 +18,13 @@ import org.springframework.cloud.client.SpringCloudApplication;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Component;
+import reactor.core.publisher.Flux;
+import reactor.core.scheduler.Schedulers;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author zhouhao
@@ -35,6 +43,7 @@ public class DeviceGatewayServiceApplication {
 
     @Component
     @ConfigurationProperties(prefix = "test")
+    @Slf4j
     public static class RegistryDevice implements CommandLineRunner {
 
         @Autowired
@@ -137,19 +146,35 @@ public class DeviceGatewayServiceApplication {
 
             new Thread(() -> {
                 long sum = initStartWith + initDeviceNumber;
-                //自动注册模拟设备
-                for (long i = initStartWith; i < sum; i++) {
-                    DeviceInfo deviceInfo = new DeviceInfo();
-                    deviceInfo.setId("test" + i);
-                    deviceInfo.setProtocol("jet-links");
-                    deviceInfo.setName("test");
-                    deviceInfo.setProductId(productInfo.getId());
+                AtomicLong counter = new AtomicLong();
+                Flux.<DeviceInfo>create(fluxSink -> {
+                    //自动注册模拟设备
+                    for (long i = initStartWith; i < sum; i++) {
+                        DeviceInfo deviceInfo = new DeviceInfo();
+                        deviceInfo.setId("test" + i);
+                        deviceInfo.setProtocol("jet-links");
+                        deviceInfo.setName("test");
+                        deviceInfo.setProductId(productInfo.getId());
 
-                    DeviceOperation operation=registry.registry(deviceInfo);
-                    operation.put("secureId", "test");
-                    operation.put("secureKey", "test");
+                        fluxSink.next(deviceInfo);
+                    }
+                    fluxSink.complete();
+                }).buffer(1000)
+                        .subscribeOn(Schedulers.parallel())
+                        .subscribe(list -> CompletableFuture.runAsync(() -> {
+                            for (DeviceInfo deviceInfo : list) {
+                                DeviceOperation operation = registry.registry(deviceInfo);
+                                Map<String, Object> all = new HashMap<>();
+                                all.put("secureId", "test");
+                                all.put("secureKey", "test");
 
-                }
+                                operation.putAll(all);
+                                counter.incrementAndGet();
+                            }
+                            log.info("batch registry device :{}", counter.get());
+                        }));
+
+
                 //注册20个子设备绑定到test0
                 for (int i = 0; i < 20; i++) {
                     DeviceInfo deviceInfo = new DeviceInfo();

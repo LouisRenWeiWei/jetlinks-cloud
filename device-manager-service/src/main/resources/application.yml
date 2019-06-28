@@ -38,6 +38,11 @@ spring:
         producer:
           header-mode: raw
           content-type: application/json
+      rabbit:
+        bindings:
+          device.disconnect:
+            consumer:
+              max-concurrency: 3
 hsweb:
   app:
     name: 设备管理服务
