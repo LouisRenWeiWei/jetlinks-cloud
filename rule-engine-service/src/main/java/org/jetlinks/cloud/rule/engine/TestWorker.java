@@ -12,7 +12,7 @@ public class TestWorker {
 
     public Object updateDeviceProperty(String deviceId, Map<String,Object> parameter){
 
-        log.debug("修改设备[{}]属性:{}",deviceId,parameter);
+        log.info("修改设备[{}]属性:{}",deviceId,parameter);
         return true;
     }
 

@@ -17,6 +17,18 @@
         </outputs>
     </node>
 
+    <node id="timer" executor="timer" name="定时获取">
+        <configuration>
+<!--            <cron>*/10 * * * * ?</cron>-->
+            <rate>10000</rate>
+            <dataJson>{"deviceId":"test0"}</dataJson>
+        </configuration>
+
+        <outputs>
+            <output id="go-to-read-device-property" target="read-device-property"/>
+        </outputs>
+    </node>
+
     <node id="read-device-property" executor="send-device-message" nodeType="MAP" name="读取设备的属性">
         <configuration>
             <deviceId>deviceId</deviceId>
@@ -76,7 +88,7 @@
         </configuration>
     </node>
 
-    <node id="write-influxdb"  executor="influx-write" nodeType="PEEK" name="数据写入到influxdb">
+    <node id="write-influxdb" executor="influx-write" nodeType="PEEK" name="数据写入到influxdb">
         <configuration>
             <url>http://127.0.0.1:8086/</url>
             <username>jetlinks</username>

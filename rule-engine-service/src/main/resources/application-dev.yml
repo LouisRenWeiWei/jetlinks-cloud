@@ -12,3 +12,4 @@ logging:
     org.hswebframework.web: DEBUG
     org.hswebframework.web.cache: WARN
     org.jetlinks: DEBUG
+    com.alibaba.nacos: warn
