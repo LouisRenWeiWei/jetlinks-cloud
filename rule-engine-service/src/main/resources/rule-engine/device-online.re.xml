@@ -3,7 +3,7 @@
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:schemaLocation="http://www.jetlinls.org/RuleEngine">
 
-    <!--启动时监听-->
+    <!--消费设备上线队列-->
     <node id="start" executor="cloud-stream" start="true" nodeType="PEEK" name="启动，消费队列">
         <configuration>
             <type>Consumer</type>
@@ -17,7 +17,7 @@
         </outputs>
     </node>
 
-    <node id="timer" executor="timer" name="定时获取">
+    <node id="timer" executor="timer" name="定时触发获取">
         <configuration>
 <!--            <cron>*/10 * * * * ?</cron>-->
             <rate>10000</rate>

@@ -59,7 +59,7 @@ public class ElasticsearchWorkerNode extends AbstractExecutableRuleNodeFactorySt
         AtomicReference<FluxSink<RuleData>> sinkReference = new AtomicReference<>();
 
         Disposable disposable = Flux.create(sinkReference::set)
-                .bufferTimeout(config.getBufferSize(), Duration.ofSeconds(2))
+                .bufferTimeout(config.getBufferSize(), Duration.ofSeconds(config.getBufferTimeoutSeconds()))
                 .subscribe(list -> client.executeAsync(config.createAction(list), new JestResultHandler<JestResult>() {
                     @Override
                     public void completed(JestResult jestResult) {
@@ -101,6 +101,8 @@ public class ElasticsearchWorkerNode extends AbstractExecutableRuleNodeFactorySt
         private String type;
 
         private int bufferSize = 100;
+
+        private int bufferTimeoutSeconds = 2;
 
 
         protected HttpClientConfig createHttpClientConfig() {
