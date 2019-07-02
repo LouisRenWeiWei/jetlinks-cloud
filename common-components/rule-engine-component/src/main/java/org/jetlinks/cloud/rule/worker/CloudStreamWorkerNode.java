@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.jetlinks.rule.engine.api.RuleData;
+import org.jetlinks.rule.engine.api.events.RuleEvent;
 import org.jetlinks.rule.engine.api.executor.ExecutableRuleNode;
 import org.jetlinks.rule.engine.api.executor.ExecutionContext;
 import org.jetlinks.rule.engine.api.model.NodeType;
@@ -16,7 +17,6 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.cloud.stream.annotation.EnableBinding;
 import org.springframework.cloud.stream.binding.AbstractBindingTargetFactory;
-import org.springframework.cloud.stream.binding.BinderAwareChannelResolver;
 import org.springframework.cloud.stream.binding.BindingService;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.MessageHandler;
@@ -29,6 +29,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -40,12 +41,9 @@ import java.util.function.Function;
  */
 @Component
 @EnableBinding
-@ConditionalOnClass(BinderAwareChannelResolver.class)
+@ConditionalOnClass(BindingService.class)
 @Slf4j
 public class CloudStreamWorkerNode extends AbstractExecutableRuleNodeFactoryStrategy<CloudStreamWorkerNode.Config> {
-
-    @Autowired
-    private BinderAwareChannelResolver resolver;
 
     @Autowired
     private BindingService bindingService;
@@ -188,8 +186,7 @@ public class CloudStreamWorkerNode extends AbstractExecutableRuleNodeFactoryStra
                 addListener(topic, channel, consumer);
 
                 context.getInput()
-                        .acceptOnce(ruleData -> context.getOutput()
-                                .write(ruleData.newData(ruleData.getData())));
+                        .acceptOnce(ruleData -> context.getOutput().write(ruleData.copy()));
 
                 context.onStop(() -> {
                     removeListener(topic, channel, consumer);
@@ -199,9 +196,16 @@ public class CloudStreamWorkerNode extends AbstractExecutableRuleNodeFactoryStra
             } else {
                 context.getInput()
                         .acceptOnce(ruleData -> {
-                            messageChannel.send(MessageBuilder.withPayload(ruleData.getData()).build());
-                            context.getOutput()
-                                    .write(ruleData.newData(ruleData.getData()));
+                            try {
+                                if (!messageChannel.send(MessageBuilder.withPayload(ruleData.getData()).build(), config.sendTimeout)) {
+                                    throw new TimeoutException("发送消息到MQ超时");
+                                }
+                                context.fireEvent(RuleEvent.NODE_EXECUTE_DONE, ruleData);
+                                context.getOutput().write(ruleData.copy());
+                            } catch (Throwable e) {
+                                context.onError(ruleData, e);
+                            }
+
                         });
             }
         };
@@ -218,6 +222,8 @@ public class CloudStreamWorkerNode extends AbstractExecutableRuleNodeFactoryStra
         private String topic;
 
         private Type type = Type.Consumer;
+
+        private long sendTimeout = 10000;
 
         @Override
         public NodeType getNodeType() {

@@ -9,6 +9,7 @@ import org.jetlinks.cloud.redis.RedissonClientRepository;
 import org.jetlinks.cloud.rule.RuleEngineProperties;
 import org.jetlinks.rule.engine.api.RuleData;
 import org.jetlinks.rule.engine.api.cluster.ha.HaManager;
+import org.jetlinks.rule.engine.api.events.RuleEvent;
 import org.jetlinks.rule.engine.api.executor.ExecutableRuleNode;
 import org.jetlinks.rule.engine.api.executor.ExecutionContext;
 import org.jetlinks.rule.engine.api.executor.RuleNodeConfiguration;
@@ -156,6 +157,10 @@ public class TimerWorkerNode extends AbstractExecutableRuleNodeFactoryStrategy<T
         long delay = info.getConfig().getDelayMillis();
 
         log.debug("{}ms后执行定时调度:{}", delay, id);
+        RuleData beforeData = RuleData.create(info.getConfig().dataJson);
+        beforeData.setAttribute("timer-fire-ts", System.currentTimeMillis() + delay);
+
+        info.context.fireEvent(RuleEvent.NODE_EXECUTE_BEFORE, beforeData);
         executorService.schedule(() -> {
             TimerInfo timerInfo = contexts.get(id);
             if (timerInfo != null) {
@@ -169,11 +174,16 @@ public class TimerWorkerNode extends AbstractExecutableRuleNodeFactoryStrategy<T
                     info.runningLocal = false;
                     return;
                 }
-                if (log.isInfoEnabled()) {
-                    log.info("触发定时任务[{}]:{}", id, timerInfo.getConfig().dataJson);
-                }
+//                if (log.isInfoEnabled()) {
+                timerInfo.context.logger()
+                        .info("触发定时任务[{}]:{}", id, timerInfo.getConfig().dataJson);
+//                    log.info("触发定时任务[{}]:{}", id, timerInfo.getConfig().dataJson);
+//                }
+                RuleData data = RuleData.create(timerInfo.getConfig().dataJson);
+
                 timerInfo.context.getOutput()
-                        .write(RuleData.create(timerInfo.getConfig().dataJson));
+                        .write(data);
+                timerInfo.context.fireEvent(RuleEvent.NODE_EXECUTE_DONE, data);
 
                 //下一个周期
                 runTimer(id);

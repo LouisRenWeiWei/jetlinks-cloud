@@ -28,6 +28,7 @@ import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.Map;
@@ -65,7 +66,7 @@ public class ElasticsearchWorkerNode extends AbstractExecutableRuleNodeFactorySt
                     public void completed(JestResult jestResult) {
                         if (!jestResult.isSucceeded()) {
                             context.logger().error("保存数据到ES失败:{}", jestResult.getJsonString());
-                            context.onError(RuleData.create(list), new RuntimeException(jestResult.getErrorMessage()));
+                            context.onError(RuleData.create(list), new IOException(jestResult.getErrorMessage()));
                         } else if (log.isInfoEnabled()) {
                             log.info("保存规则数据到ES成功,数量:{}", list.size());
                         }

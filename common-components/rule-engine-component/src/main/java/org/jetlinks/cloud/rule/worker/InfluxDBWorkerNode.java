@@ -68,7 +68,7 @@ public class InfluxDBWorkerNode extends AbstractExecutableRuleNodeFactoryStrateg
                         if (log.isInfoEnabled()) {
                             log.info("保存规则数据到InfluxDB成功,数量:{}", list.size());
                         }
-                    } catch (Exception e) {
+                    } catch (Throwable e) {
                         context.onError(RuleData.create(list), e);
                     }
                 });
