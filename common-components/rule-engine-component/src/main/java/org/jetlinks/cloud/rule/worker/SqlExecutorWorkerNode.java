@@ -47,14 +47,14 @@ public class SqlExecutorWorkerNode extends AbstractExecutableRuleNodeFactoryStra
 
         if (config.isQuery()) {
             return data -> Try.of(() -> {
-                DataSourceHolder.switcher().use(config.dataSourceId);
+                config.switchDataSource();
                 try {
                     List<Map<String, Object>> all = new ArrayList<>();
                     data.acceptMap(map ->
                             Try.run(() -> all.addAll(sqlExecutor.list(config.getSql(), map, new SimpleMapWrapper() {
                                 @Override
                                 public boolean done(Map<String, Object> instance) {
-                                    if (config.queryEachNext) {
+                                    if (config.stream) {
                                         context.getOutput()
                                                 .write(data.newData(instance));
                                         return false;
@@ -62,20 +62,20 @@ public class SqlExecutorWorkerNode extends AbstractExecutableRuleNodeFactoryStra
                                     return super.done(instance);
                                 }
                             }))));
-                    if (!config.queryEachNext) {
+                    if (!config.stream) {
                         return all;
                     } else {
                         return SkipNextValue.INSTANCE;
                     }
 
                 } finally {
-                    DataSourceHolder.switcher().useLast();
+                    config.resetDataSource();
                 }
             }).toCompletableFuture();
         } else {
             return data ->
                     Try.<Object>of(() -> {
-                        DataSourceHolder.switcher().use(config.dataSourceId);
+                        config.switchDataSource();
                         try {
                             AtomicInteger total = new AtomicInteger();
                             if (config.isTransaction()) {
@@ -95,7 +95,7 @@ public class SqlExecutorWorkerNode extends AbstractExecutableRuleNodeFactoryStra
                             }
                             return total.get();
                         } finally {
-                            DataSourceHolder.switcher().useLast();
+                            config.resetDataSource();
                         }
                     }).toCompletableFuture();
         }
@@ -113,7 +113,7 @@ public class SqlExecutorWorkerNode extends AbstractExecutableRuleNodeFactoryStra
 
         private String sql;
 
-        private boolean queryEachNext;
+        private boolean stream;
 
         private boolean transaction;
 
@@ -121,6 +121,18 @@ public class SqlExecutorWorkerNode extends AbstractExecutableRuleNodeFactoryStra
 
             return sql.trim().startsWith("SELECT") ||
                     sql.trim().startsWith("select");
+        }
+
+        public void switchDataSource() {
+            if (dataSourceId != null) {
+                DataSourceHolder.switcher().use(dataSourceId);
+            }
+        }
+
+        public void resetDataSource() {
+            if (dataSourceId != null) {
+                DataSourceHolder.switcher().useLast();
+            }
         }
     }
 

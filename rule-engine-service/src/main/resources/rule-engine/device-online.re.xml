@@ -17,15 +17,57 @@
         </outputs>
     </node>
 
-    <node id="timer" executor="timer" name="定时触发获取">
+    <node id="timer" executor="timer" name="定时触发" parallel="true">
         <configuration>
-<!--            <cron>*/10 * * * * ?</cron>-->
+            <!--            <cron>*/10 * * * * ?</cron>-->
             <rate>10000</rate>
             <dataJson>{"deviceId":"test0"}</dataJson>
         </configuration>
 
         <outputs>
             <output id="go-to-read-device-property" target="read-device-property"/>
+            <output id="go-sql-test" target="sql-test"/>
+            <output id="go-script-test" target="script-test"/>
+        </outputs>
+    </node>
+
+    <node id="sql-test" executor="sql" name="sql测试">
+        <configuration>
+            <sql>select 1 from dual</sql>
+        </configuration>
+    </node>
+
+    <node id="mapping-test" executor="data-mapping" name="数据转换">
+        <configuration>
+            <keepSourceData>false</keepSourceData>
+            <mappings type="list">
+                <mapping>
+                    <source>deviceId</source>
+                    <target>di</target>
+                </mapping>
+                <mapping>
+                    <source>timestamp</source>
+                    <target>ts</target>
+                </mapping>
+            </mappings>
+        </configuration>
+        <outputs>
+            <output id="go-write-property-db" target="write-property-db"/>
+        </outputs>
+    </node>
+
+    <node id="script-test" executor="script" name="脚本">
+        <configuration>
+            <lang>groovy</lang>
+            <script>
+                handler.onMessage({ruleData->
+                    context.logger().info("执行脚本:{}",ruleData);
+                    return ["deviceId":ruleData.data,"timestamp":ruleData.attributes.execute_time];
+                });
+            </script>
+        </configuration>
+        <outputs>
+            <output id="go-mapping-test" target="mapping-test" />
         </outputs>
     </node>
 

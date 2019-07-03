@@ -136,12 +136,14 @@ public class TimerWorkerNode extends AbstractExecutableRuleNodeFactoryStrategy<T
         return executionContext -> {
             contexts.put(config.getRuleId(), new TimerInfo(executionContext, config, false));
 
+            executionContext.getInput()
+                    .acceptOnce(ruleData -> executionContext.getOutput().write(ruleData));
+
             executionContext.onStop(() -> contexts.remove(config.getRuleId()));
 
             tryInitAndRunTimer(config.getRuleId(), false);
 
-            executionContext.getInput()
-                    .acceptOnce(ruleData -> executionContext.getOutput().write(ruleData));
+
         };
     }
 

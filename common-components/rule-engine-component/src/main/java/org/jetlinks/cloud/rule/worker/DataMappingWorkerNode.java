@@ -7,6 +7,7 @@ import org.hswebframework.web.ExpressionUtils;
 import org.hswebframework.web.bean.Converter;
 import org.hswebframework.web.bean.FastBeanCopier;
 import org.jetlinks.rule.engine.api.RuleData;
+import org.jetlinks.rule.engine.api.executor.ExecutableRuleNode;
 import org.jetlinks.rule.engine.api.executor.ExecutionContext;
 import org.jetlinks.rule.engine.api.model.NodeType;
 import org.jetlinks.rule.engine.executor.AbstractExecutableRuleNodeFactoryStrategy;
@@ -37,6 +38,13 @@ public class DataMappingWorkerNode extends AbstractExecutableRuleNodeFactoryStra
     @Override
     public String getSupportType() {
         return "data-mapping";
+    }
+
+    @Override
+    protected ExecutableRuleNode doCreate(Config config) {
+
+
+        return super.doCreate(config);
     }
 
     @Override

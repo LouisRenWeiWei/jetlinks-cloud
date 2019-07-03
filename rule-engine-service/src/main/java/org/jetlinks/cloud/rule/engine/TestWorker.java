@@ -20,4 +20,5 @@ public class TestWorker {
 
         log.info("读取设备属性错误:{}",ruleData.toString());
     }
+
 }
