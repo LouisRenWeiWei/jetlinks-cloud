@@ -68,5 +68,12 @@
             <version>${hsweb.framework.version}</version>
         </dependency>
 
+        <dependency>
+            <groupId>org.jetlinks</groupId>
+            <artifactId>lettuce-plus-core</artifactId>
+            <version>1.0.0-SNAPSHOT</version>
+<!--            <optional>true</optional>-->
+        </dependency>
+
     </dependencies>
 </project>

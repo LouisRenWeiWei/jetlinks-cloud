@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<rule id="device-online-handler:1.0" runMode="CLUSTER" name="设备上线处理" xmlns="http://www.jetlinls.org/RuleEngine"
+<rule id="device-online-handler:1.0" runMode="DISTRIBUTED" name="设备上线处理" xmlns="http://www.jetlinls.org/RuleEngine"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:schemaLocation="http://www.jetlinls.org/RuleEngine">
 

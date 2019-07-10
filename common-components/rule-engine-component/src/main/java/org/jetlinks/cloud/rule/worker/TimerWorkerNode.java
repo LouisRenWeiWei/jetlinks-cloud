@@ -1,12 +1,14 @@
 package org.jetlinks.cloud.rule.worker;
 
+import io.lettuce.core.api.async.RedisAsyncCommands;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.jetlinks.cloud.redis.RedissonClientRepository;
+import org.jetlinks.cloud.redis.LettuceClientRepository;
 import org.jetlinks.cloud.rule.RuleEngineProperties;
+import org.jetlinks.lettuce.LettucePlus;
 import org.jetlinks.rule.engine.api.RuleData;
 import org.jetlinks.rule.engine.api.cluster.ha.HaManager;
 import org.jetlinks.rule.engine.api.events.RuleEvent;
@@ -17,10 +19,6 @@ import org.jetlinks.rule.engine.api.model.NodeType;
 import org.jetlinks.rule.engine.executor.AbstractExecutableRuleNodeFactoryStrategy;
 import org.jetlinks.rule.engine.executor.supports.RuleNodeConfig;
 import org.redisson.api.CronSchedule;
-import org.redisson.api.RMap;
-import org.redisson.api.RSet;
-import org.redisson.api.RedissonClient;
-import org.redisson.client.codec.StringCodec;
 import org.redisson.executor.CronExpression;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -55,16 +53,12 @@ public class TimerWorkerNode extends AbstractExecutableRuleNodeFactoryStrategy<T
     private HaManager haManager;
 
     @Autowired
-    private RedissonClientRepository redissonClientRepository;
+    private LettuceClientRepository clientRepository;
 
     @Autowired
     private RuleEngineProperties ruleEngineProperties;
 
-    private RedissonClient redissonClient;
-
     private Map<String, TimerInfo> contexts = new ConcurrentHashMap<>();
-
-    private RMap<String, String> timerServerInfo;
 
     @Override
     public Function<RuleData, CompletionStage<Object>> createExecutor(ExecutionContext context, Config config) {
@@ -72,21 +66,19 @@ public class TimerWorkerNode extends AbstractExecutableRuleNodeFactoryStrategy<T
         throw new UnsupportedOperationException();
     }
 
+    private RedisAsyncCommands<String, String> redis;
+
     @PostConstruct
+    @SneakyThrows
     public void start() {
 
-        redissonClient = redissonClientRepository.getClient(ruleEngineProperties.getRedisName())
-                .orElseGet(redissonClientRepository::getDefaultClient);
+        LettucePlus lettucePlus = clientRepository.getClientOrDefault(ruleEngineProperties.getRedisName());
+        redis = lettucePlus.<String, String>getRedisAsync(org.jetlinks.lettuce.codec.StringCodec.getInstance())
+                .toCompletableFuture().get(10, TimeUnit.SECONDS);
 
-        timerServerInfo = redissonClient.getMap("rule-engine-timer-info", StringCodec.INSTANCE);
         //有节点退出了.需要接管此节点上的任务
-        haManager.onNodeLeave(nodeInfo -> {
-
-            RSet<String> rules = redissonClient.getSet("scheduler-timer-info:".concat(nodeInfo.getId()));
-            for (String rule : rules) {
-                tryInitAndRunTimer(rule, true);
-            }
-        });
+        haManager.onNodeLeave(nodeInfo ->
+                redis.smembers(rule -> tryInitAndRunTimer(rule, true), "scheduler-timer-info:".concat(nodeInfo.getId())));
 
     }
 
@@ -106,26 +98,28 @@ public class TimerWorkerNode extends AbstractExecutableRuleNodeFactoryStrategy<T
         }
         Config config = info.getConfig();
 
-        //当前节点的调度记录
-        RSet<String> history = redissonClient.getSet("scheduler-timer-info:".concat(haManager.getCurrentNode().getId()));
-        String serverNodeId = haManager.getCurrentNode().getId();
+        redis.smembers("scheduler-timer-info:".concat(haManager.getCurrentNode().getId()))
+                .thenAccept(history -> {
+                    String serverNodeId = haManager.getCurrentNode().getId();
 
-        //直接由当前节点进行调度
-        if (history.contains(config.getRuleId()) || force) {
-            timerServerInfo.put(config.getRuleId(), haManager.getCurrentNode().getId());
-        } else {
-            //尝试使用当前节点进行调度,和其他节点一起竞争任务.
-            serverNodeId = timerServerInfo.putIfAbsent(config.getRuleId(), haManager.getCurrentNode().getId());
+                    //直接由当前节点进行调度
+                    if (history.contains(config.getRuleId()) || force) {
+                        redis.hset("timer-server-info", config.getRuleId(), serverNodeId);
+                        redis.sadd("scheduler-timer-info:".concat(serverNodeId), config.getRuleId());
+                        //当前节点
+                        runTimer(config.getRuleId());
+                    } else {
+                        //尝试使用当前节点进行调度,和其他节点一起竞争任务.
+                        redis.hsetnx("timer-server-info", config.getRuleId(), serverNodeId)
+                                .thenAccept(success -> {
+                                    if (success) {
+                                        redis.sadd("scheduler-timer-info:".concat(serverNodeId), config.getRuleId());
+                                        runTimer(config.getRuleId());
+                                    }
+                                });
+                    }
+                });
 
-        }
-        String scheduleServerId = serverNodeId == null ? haManager.getCurrentNode().getId() : serverNodeId;
-
-        redissonClient.getSet("scheduler-timer-info:".concat(scheduleServerId)).add(config.getRuleId());
-
-        //当前节点
-        if (haManager.getCurrentNode().getId().equals(scheduleServerId)) {
-            runTimer(config.getRuleId());
-        }
     }
 
     @Override
@@ -170,25 +164,30 @@ public class TimerWorkerNode extends AbstractExecutableRuleNodeFactoryStrategy<T
                     return;
                 }
                 String serverId = haManager.getCurrentNode().getId();
+                redis.hget("timer-server-info", timerInfo.config.getRuleId())
+                        .whenComplete((nil, error) -> {
+                            if (null != error) {
+                                log.error("获取调度信息失败", error);
+                                runTimer(id);
+                            }
+                        })
+                        .thenAccept(schedulerServer -> {
+                            if (!serverId.equals(schedulerServer)) {
+                                log.debug("定时调度[{}]已在此节点[{}]取消", timerInfo.config.getRuleId(), serverId);
+                                info.runningLocal = false;
+                                return;
+                            }
+                            timerInfo.context.logger()
+                                    .info("触发定时任务[{}]:{}", id, timerInfo.getConfig().dataJson);
 
-                if (!serverId.equals(timerServerInfo.get(timerInfo.config.getRuleId()))) {
-                    log.debug("定时调度[{}]已在此节点[{}]取消", timerInfo.config.getRuleId(), serverId);
-                    info.runningLocal = false;
-                    return;
-                }
-//                if (log.isInfoEnabled()) {
-                timerInfo.context.logger()
-                        .info("触发定时任务[{}]:{}", id, timerInfo.getConfig().dataJson);
-//                    log.info("触发定时任务[{}]:{}", id, timerInfo.getConfig().dataJson);
-//                }
-                RuleData data = RuleData.create(timerInfo.getConfig().dataJson);
+                            RuleData data = RuleData.create(timerInfo.getConfig().dataJson);
 
-                timerInfo.context.getOutput()
-                        .write(data);
-                timerInfo.context.fireEvent(RuleEvent.NODE_EXECUTE_DONE, data);
+                            timerInfo.context.getOutput().write(data);
+                            timerInfo.context.fireEvent(RuleEvent.NODE_EXECUTE_DONE, data);
 
-                //下一个周期
-                runTimer(id);
+                            //下一个周期
+                            runTimer(id);
+                        });
             }
 
         }, delay, TimeUnit.MILLISECONDS);

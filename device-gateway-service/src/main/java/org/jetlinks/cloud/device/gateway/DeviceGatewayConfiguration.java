@@ -12,13 +12,13 @@ import org.jetlinks.cloud.device.gateway.events.DeviceOfflineEvent;
 import org.jetlinks.cloud.device.gateway.events.DeviceOnlineEvent;
 import org.jetlinks.cloud.device.gateway.vertx.VerticleSupplier;
 import org.jetlinks.cloud.device.gateway.vertx.VertxDestroyListener;
-import org.jetlinks.cloud.redis.RedissonClientRepository;
+import org.jetlinks.cloud.redis.LettuceClientRepository;
 import org.jetlinks.core.ProtocolSupports;
 import org.jetlinks.core.device.registry.DeviceMessageHandler;
 import org.jetlinks.core.device.registry.DeviceRegistry;
 import org.jetlinks.core.message.codec.Transport;
 import org.jetlinks.gateway.monitor.GatewayServerMonitor;
-import org.jetlinks.gateway.monitor.RedissonGatewayServerMonitor;
+import org.jetlinks.gateway.monitor.LettuceGatewayServerMonitor;
 import org.jetlinks.gateway.session.DefaultDeviceSessionManager;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -64,18 +64,24 @@ public class DeviceGatewayConfiguration {
     }
 
 
-    @Bean
-    public RedissonGatewayServerMonitor deviceMonitor(Environment environment,
-                                                      ScheduledExecutorService executorService,
-                                                      RedissonClientRepository repository) {
-        return new RedissonGatewayServerMonitor(environment.getProperty("gateway.server-id"),
-                repository.getClient("device-registry")
-                        .orElseGet(repository::getDefaultClient), executorService);
+//    @Bean
+//    public RedissonGatewayServerMonitor redissonGatewayServerMonitor(Environment environment,
+//                                                                     ScheduledExecutorService executorService,
+//                                                                     RedissonClientRepository repository) {
+//        return new RedissonGatewayServerMonitor(environment.getProperty("gateway.server-id"),
+//                repository.getClient("device-registry")
+//                        .orElseGet(repository::getDefaultClient), executorService);
+//    }
+
+    @Bean(initMethod = "startup",destroyMethod = "shutdown")
+    public LettuceGatewayServerMonitor lettuceGatewayServerMonitor(Environment environment,
+                                                                    LettuceClientRepository repository) {
+        return new LettuceGatewayServerMonitor(environment.getProperty("gateway.server-id"), repository.getClientOrDefault("rule-engine"));
     }
 
     @Bean(initMethod = "init", destroyMethod = "shutdown")
     @Order(Ordered.HIGHEST_PRECEDENCE)
-    public DefaultDeviceSessionManager deviceSessionManager( ProtocolSupports protocolSupports,
+    public DefaultDeviceSessionManager deviceSessionManager(ProtocolSupports protocolSupports,
                                                             DeviceRegistry registry,
                                                             DeviceMessageHandler deviceMessageHandler,
                                                             GatewayServerMonitor gatewayServerMonitor,
@@ -118,7 +124,7 @@ public class DeviceGatewayConfiguration {
     }
 
     @Slf4j
-    public static class VertxServerInitializer implements CommandLineRunner, DisposableBean ,Ordered{
+    public static class VertxServerInitializer implements CommandLineRunner, DisposableBean, Ordered {
 
         @Autowired
         private VerticleFactory verticleFactory;

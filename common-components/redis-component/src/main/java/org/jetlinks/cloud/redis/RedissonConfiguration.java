@@ -24,12 +24,10 @@ import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.transaction.TransactionAwareCacheManagerProxy;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -40,8 +38,8 @@ import java.util.concurrent.TimeUnit;
  * @author zhouhao
  * @since 1.0.0
  */
-@Configuration
-@EnableConfigurationProperties(MultiRedissonProperties.class)
+//@Configuration
+//@EnableConfigurationProperties(MultiRedissonProperties.class)
 public class RedissonConfiguration {
 
     @Bean

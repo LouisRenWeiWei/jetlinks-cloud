@@ -5,7 +5,6 @@ import io.vertx.mqtt.MqttServerOptions;
 import lombok.Getter;
 import lombok.Setter;
 import org.hswebframework.web.service.GenericsPayloadApplicationEvent;
-import org.jetlinks.core.ProtocolSupports;
 import org.jetlinks.core.device.registry.DeviceRegistry;
 import org.jetlinks.gateway.monitor.GatewayServerMonitor;
 import org.jetlinks.gateway.session.DeviceSessionManager;
@@ -30,9 +29,6 @@ public class MQTTServerVerticleSupplier implements VerticleSupplier, Environment
     private DeviceRegistry deviceRegistry;
 
     @Autowired
-    private ProtocolSupports protocolSupports;
-
-    @Autowired
     private DeviceSessionManager deviceSessionManager;
 
     @Autowired
@@ -50,7 +46,6 @@ public class MQTTServerVerticleSupplier implements VerticleSupplier, Environment
         MqttServer mqttServer = new MqttServer();
         mqttServer.setMqttServerOptions(mqttServerOptions);
         mqttServer.setRegistry(deviceRegistry);
-        mqttServer.setProtocolSupports(protocolSupports);
         mqttServer.setGatewayServerMonitor(gatewayServerMonitor);
         mqttServer.setPublicServerAddress(publicServerAddress);
         mqttServer.setMessageConsumer(((deviceClient, message) -> {
