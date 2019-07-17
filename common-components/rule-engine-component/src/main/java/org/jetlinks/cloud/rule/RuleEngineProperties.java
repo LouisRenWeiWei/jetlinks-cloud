@@ -38,7 +38,7 @@ public class RuleEngineProperties {
         Assert.hasText(nodeId, "cluster.nodeId");
         NodeInfo nodeInfo = new NodeInfo();
         nodeInfo.setId(nodeId);
-        nodeInfo.setRules(rules);
+        nodeInfo.setRoles(rules);
         nodeInfo.setTags(tags);
         nodeInfo.setName(name);
         return nodeInfo;

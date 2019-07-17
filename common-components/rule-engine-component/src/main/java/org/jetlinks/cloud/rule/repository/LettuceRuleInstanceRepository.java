@@ -3,6 +3,7 @@ package org.jetlinks.cloud.rule.repository;
 import io.lettuce.core.api.StatefulRedisConnection;
 import lombok.SneakyThrows;
 import org.jetlinks.lettuce.LettucePlus;
+import org.jetlinks.rule.engine.api.RuleInstanceState;
 import org.jetlinks.rule.engine.api.persistent.RuleInstancePersistent;
 import org.jetlinks.rule.engine.api.persistent.repository.RuleInstanceRepository;
 
@@ -19,7 +20,7 @@ public class LettuceRuleInstanceRepository implements RuleInstanceRepository {
 
     public LettuceRuleInstanceRepository(String prefix, LettucePlus plus) {
         this.redisKey = prefix.concat(":rule:instance:repo");
-        this.plus=plus;
+        this.plus = plus;
     }
 
     @Override
@@ -48,6 +49,24 @@ public class LettuceRuleInstanceRepository implements RuleInstanceRepository {
 
     @Override
     @SneakyThrows
+    public List<RuleInstancePersistent> findAll() {
+        return plus.<String, RuleInstancePersistent>getConnection()
+                .thenApply(StatefulRedisConnection::async)
+                .thenCompose(redis -> redis.hvals(redisKey))
+                .toCompletableFuture()
+                .get(10, TimeUnit.SECONDS);
+    }
+
+    @Override
+    public List<RuleInstancePersistent> findBySchedulerId(String schedulerId) {
+        return findAll()
+                .stream()
+                .filter(persistent -> schedulerId.equals(persistent.getCurrentSchedulerId()) || schedulerId.equals(persistent.getSchedulerId()))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @SneakyThrows
     public void saveInstance(RuleInstancePersistent instancePersistent) {
 
         plus.<String, RuleInstancePersistent>getConnection()
@@ -58,20 +77,12 @@ public class LettuceRuleInstanceRepository implements RuleInstanceRepository {
     }
 
     @Override
-    public void stopInstance(String instanceId) {
+    public void changeState(String instanceId, RuleInstanceState state) {
         findInstanceById(instanceId)
-                .ifPresent(p -> {
-                    p.setRunning(false);
-                    saveInstance(p);
-                });
-    }
-
-    @Override
-    public void startInstance(String instanceId) {
-        findInstanceById(instanceId)
-                .ifPresent(p -> {
-                    p.setRunning(true);
-                    saveInstance(p);
-                });
+                .map(r -> {
+                    r.setState(state);
+                    return r;
+                })
+                .ifPresent(this::saveInstance);
     }
 }

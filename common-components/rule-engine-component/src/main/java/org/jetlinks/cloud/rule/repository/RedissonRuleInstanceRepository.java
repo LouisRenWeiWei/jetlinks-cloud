@@ -1,10 +1,12 @@
 package org.jetlinks.cloud.rule.repository;
 
 import lombok.AllArgsConstructor;
+import org.jetlinks.rule.engine.api.RuleInstanceState;
 import org.jetlinks.rule.engine.api.persistent.RuleInstancePersistent;
 import org.jetlinks.rule.engine.api.persistent.repository.RuleInstanceRepository;
 import org.redisson.api.RedissonClient;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -38,26 +40,31 @@ public class RedissonRuleInstanceRepository implements RuleInstanceRepository {
     }
 
     @Override
+    public List<RuleInstancePersistent> findAll() {
+        return new ArrayList<>(redissonClient.<String, RuleInstancePersistent>getMap(prefixName + ":rule:instance:repo").values());
+    }
+
+    @Override
+    public List<RuleInstancePersistent> findBySchedulerId(String schedulerId) {
+        return findAll()
+                .stream()
+                .filter(persistent -> schedulerId.equals(persistent.getCurrentSchedulerId()) || schedulerId.equals(persistent.getSchedulerId()))
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public void saveInstance(RuleInstancePersistent instancePersistent) {
         redissonClient.<String, RuleInstancePersistent>getMap(prefixName + ":rule:instance:repo")
                 .fastPut(instancePersistent.getId(), instancePersistent);
     }
 
     @Override
-    public void stopInstance(String instanceId) {
+    public void changeState(String instanceId, RuleInstanceState state) {
         findInstanceById(instanceId)
-                .ifPresent(p -> {
-                    p.setRunning(false);
-                    saveInstance(p);
-                });
-    }
-
-    @Override
-    public void startInstance(String instanceId) {
-        findInstanceById(instanceId)
-                .ifPresent(p -> {
-                    p.setRunning(true);
-                    saveInstance(p);
-                });
+                .map(r -> {
+                    r.setState(state);
+                    return r;
+                })
+                .ifPresent(this::saveInstance);
     }
 }

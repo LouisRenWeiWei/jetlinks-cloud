@@ -3,6 +3,8 @@ package org.jetlinks.cloud.redis.lettuce;
 import io.lettuce.core.EpollProvider;
 import io.lettuce.core.KqueueProvider;
 import io.lettuce.core.codec.RedisCodec;
+import io.lettuce.core.resource.DefaultClientResources;
+import io.lettuce.core.resource.DefaultEventLoopGroupProvider;
 import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.kqueue.KQueueEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -10,6 +12,7 @@ import io.netty.util.concurrent.EventExecutorGroup;
 import org.jetlinks.cloud.redis.LettuceClientRepository;
 import org.jetlinks.lettuce.LettucePlus;
 import org.jetlinks.lettuce.codec.FstCodec;
+import org.nustaq.serialization.FSTConfiguration;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.annotation.PostConstruct;
@@ -45,18 +48,21 @@ public class LettuceRepository implements LettuceClientRepository {
         } else if (KqueueProvider.isAvailable()) {
             groupClass = KQueueEventLoopGroup.class;
         }
-//        EventExecutorGroup eventExecutors = DefaultEventLoopGroupProvider.createEventLoopGroup(groupClass, properties.getThreadSize());
-//
-//        DefaultClientResources resources = DefaultClientResources.builder()
-//                .ioThreadPoolSize(threadSize)
-//                .eventLoopGroupProvider(new DefaultEventLoopGroupProvider(threadSize))
-//                .eventExecutorGroup(eventExecutors)
-//                .computationThreadPoolSize(threadSize)
-//                .build();
+        EventExecutorGroup eventExecutors = DefaultEventLoopGroupProvider.createEventLoopGroup(groupClass, properties.getThreadSize());
 
-        RedisCodec<Object, Object> codec = new FstCodec<>();
+        DefaultClientResources resources = DefaultClientResources.builder()
+                .ioThreadPoolSize(threadSize)
+                .eventLoopGroupProvider(new DefaultEventLoopGroupProvider(threadSize))
+                .eventExecutorGroup(eventExecutors)
+                .computationThreadPoolSize(threadSize)
+                .build();
 
-        properties.getClients().forEach((key, value) -> repository.put(key, value.createLettucePlus(null, codec, executorService)));
+        FSTConfiguration def = FSTConfiguration.createDefaultConfiguration();
+        def.setClassLoader(this.getClass().getClassLoader());
+        def.setForceSerializable(true);
+        RedisCodec<Object, Object> codec = new FstCodec<>(def);
+
+        properties.getClients().forEach((key, value) -> repository.put(key, value.createLettucePlus(resources, codec, executorService)));
 
 
     }

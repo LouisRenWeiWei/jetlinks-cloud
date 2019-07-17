@@ -49,7 +49,7 @@ public class DataMappingWorkerNodeTest {
                 return new Input() {
 
                     @Override
-                    public boolean acceptOnce(Consumer<RuleData> accept) {
+                    public boolean accept(Consumer<RuleData> accept) {
                         consumerReference.set(accept);
                         return true;
                     }

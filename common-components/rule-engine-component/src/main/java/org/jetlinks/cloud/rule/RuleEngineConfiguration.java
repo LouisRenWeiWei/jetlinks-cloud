@@ -15,7 +15,7 @@ import org.jetlinks.rule.engine.cluster.DefaultWorkerNodeSelector;
 import org.jetlinks.rule.engine.cluster.WorkerNodeSelectorStrategy;
 import org.jetlinks.rule.engine.cluster.lettuce.LettuceClusterManager;
 import org.jetlinks.rule.engine.cluster.lettuce.LettuceHaManager;
-import org.jetlinks.rule.engine.cluster.scheduler.RuleEngineScheduler;
+import org.jetlinks.rule.engine.cluster.scheduler.DefaultRuleEngineScheduler;
 import org.jetlinks.rule.engine.cluster.worker.RuleEngineWorker;
 import org.jetlinks.rule.engine.condition.ConditionEvaluatorStrategy;
 import org.jetlinks.rule.engine.condition.DefaultConditionEvaluator;
@@ -169,7 +169,7 @@ public class RuleEngineConfiguration {
 //
 //    }
 
-    @Bean(initMethod = "startup")
+    @Bean(initMethod = "startup",destroyMethod = "shutdown")
     public LettuceHaManager lettuceHaManager(LettuceClientRepository lettuceClientRepository, RuleEngineProperties properties) {
 
         return new LettuceHaManager(properties.toNodeInfo(), lettuceClientRepository.getClientOrDefault("rule-engine").getHaManager(properties.getName()));
@@ -198,12 +198,12 @@ public class RuleEngineConfiguration {
 //    }
 
     @Bean(initMethod = "start")
-    public RuleEngineScheduler ruleEngineScheduler(ClusterManager clusterManager,
-                                                   RuleEngineModelParser modelParser,
-                                                   RuleRepository ruleRepository,
-                                                   WorkerNodeSelector workerNodeSelector,
-                                                   RuleInstanceRepository instanceRepository) {
-        RuleEngineScheduler engine = new RuleEngineScheduler();
+    public DefaultRuleEngineScheduler ruleEngineScheduler(ClusterManager clusterManager,
+                                                          RuleEngineModelParser modelParser,
+                                                          RuleRepository ruleRepository,
+                                                          WorkerNodeSelector workerNodeSelector,
+                                                          RuleInstanceRepository instanceRepository) {
+        DefaultRuleEngineScheduler engine = new DefaultRuleEngineScheduler();
         engine.setClusterManager(clusterManager);
         engine.setRuleRepository(ruleRepository);
         engine.setInstanceRepository(instanceRepository);

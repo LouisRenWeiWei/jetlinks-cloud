@@ -186,7 +186,7 @@ public class CloudStreamWorkerNode extends AbstractExecutableRuleNodeFactoryStra
                 addListener(topic, channel, consumer);
 
                 context.getInput()
-                        .acceptOnce(ruleData -> context.getOutput().write(ruleData.copy()));
+                        .accept(ruleData -> context.getOutput().write(ruleData.copy()));
 
                 context.onStop(() -> {
                     removeListener(topic, channel, consumer);
@@ -195,7 +195,7 @@ public class CloudStreamWorkerNode extends AbstractExecutableRuleNodeFactoryStra
 
             } else {
                 context.getInput()
-                        .acceptOnce(ruleData -> {
+                        .accept(ruleData -> {
                             try {
                                 if (!messageChannel.send(MessageBuilder.withPayload(ruleData.getData()).build(), config.sendTimeout)) {
                                     throw new TimeoutException("发送消息到MQ超时");

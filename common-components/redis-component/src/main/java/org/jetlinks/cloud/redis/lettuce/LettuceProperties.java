@@ -55,7 +55,7 @@ public class LettuceProperties {
             redisURI.withPort(url.getPort());
             init(redisURI);
 
-            RedisClient client = RedisClient.create( redisURI.build());
+            RedisClient client = RedisClient.create( resources,redisURI.build());
             client.setOptions(ClientOptions.builder()
                     .autoReconnect(true)
                     .build());
@@ -71,7 +71,7 @@ public class LettuceProperties {
             RedisURI.Builder builder = RedisURI.builder();
             init(builder);
 
-            RedisClient client = RedisClient.create( builder.build());
+            RedisClient client = RedisClient.create(resources, builder.build());
             client.setOptions(ClientOptions.builder()
                     .autoReconnect(true)
                     .build());

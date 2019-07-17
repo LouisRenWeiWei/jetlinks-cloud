@@ -5,7 +5,7 @@ import org.jetlinks.rule.engine.api.persistent.RulePersistent;
 import org.jetlinks.rule.engine.api.persistent.repository.RuleRepository;
 import org.redisson.api.RedissonClient;
 
-import java.util.Optional;
+import java.util.*;
 
 /**
  * @author zhouhao
@@ -20,6 +20,11 @@ public class RedissonRuleRepository implements RuleRepository {
     @Override
     public Optional<RulePersistent> findRuleById(String ruleId) {
         return Optional.ofNullable(redissonClient.<String, RulePersistent>getMap(prefixName + ":rule:repo").get(ruleId));
+    }
+
+    @Override
+    public List<RulePersistent> findRuleByIdList(Collection<String> ruleIdList) {
+        return new ArrayList<>(redissonClient.<String, RulePersistent>getMap(prefixName + ":rule:repo").values());
     }
 
     @Override
