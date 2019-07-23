@@ -10,7 +10,7 @@ import org.jetlinks.core.message.DeviceMessageReply;
 import org.jetlinks.rule.engine.api.RuleData;
 import org.jetlinks.rule.engine.api.executor.ExecutionContext;
 import org.jetlinks.rule.engine.api.model.NodeType;
-import org.jetlinks.rule.engine.executor.AbstractExecutableRuleNodeFactoryStrategy;
+import org.jetlinks.rule.engine.executor.CommonExecutableRuleNodeFactoryStrategy;
 import org.jetlinks.rule.engine.executor.supports.RuleNodeConfig;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -24,14 +24,14 @@ import java.util.function.Function;
 
 @Component
 @ConditionalOnBean(DeviceRegistry.class)
-public class DeviceMessageWorkerNode extends AbstractExecutableRuleNodeFactoryStrategy<DeviceMessageWorkerNode.Config> {
+public class DeviceMessageWorkerNode extends CommonExecutableRuleNodeFactoryStrategy<DeviceMessageWorkerNode.Config> {
 
 
     @Autowired
     private DeviceRegistry deviceRegistry;
 
     @Override
-    public Config newConfig() {
+    public Config newConfigInstance() {
         return new Config();
     }
 

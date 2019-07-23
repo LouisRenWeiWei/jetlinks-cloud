@@ -15,7 +15,7 @@ import org.influxdb.dto.Point;
 import org.jetlinks.rule.engine.api.RuleData;
 import org.jetlinks.rule.engine.api.executor.ExecutionContext;
 import org.jetlinks.rule.engine.api.model.NodeType;
-import org.jetlinks.rule.engine.executor.AbstractExecutableRuleNodeFactoryStrategy;
+import org.jetlinks.rule.engine.executor.CommonExecutableRuleNodeFactoryStrategy;
 import org.jetlinks.rule.engine.executor.supports.RuleNodeConfig;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.stereotype.Component;
@@ -40,10 +40,10 @@ import java.util.stream.Collectors;
 @Component
 @ConditionalOnClass(InfluxDB.class)
 @Slf4j
-public class InfluxDBWorkerNode extends AbstractExecutableRuleNodeFactoryStrategy<InfluxDBWorkerNode.Config> {
+public class InfluxDBWorkerNode extends CommonExecutableRuleNodeFactoryStrategy<InfluxDBWorkerNode.Config> {
 
     @Override
-    public Config newConfig() {
+    public Config newConfigInstance() {
         return new Config();
     }
 

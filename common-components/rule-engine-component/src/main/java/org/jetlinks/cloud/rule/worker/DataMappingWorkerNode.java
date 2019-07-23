@@ -10,7 +10,7 @@ import org.jetlinks.rule.engine.api.RuleData;
 import org.jetlinks.rule.engine.api.executor.ExecutableRuleNode;
 import org.jetlinks.rule.engine.api.executor.ExecutionContext;
 import org.jetlinks.rule.engine.api.model.NodeType;
-import org.jetlinks.rule.engine.executor.AbstractExecutableRuleNodeFactoryStrategy;
+import org.jetlinks.rule.engine.executor.CommonExecutableRuleNodeFactoryStrategy;
 import org.jetlinks.rule.engine.executor.supports.RuleNodeConfig;
 import org.springframework.stereotype.Component;
 
@@ -26,12 +26,12 @@ import java.util.stream.Collectors;
  * @since 1.0.0
  */
 @Component
-public class DataMappingWorkerNode extends AbstractExecutableRuleNodeFactoryStrategy<DataMappingWorkerNode.Config> {
+public class DataMappingWorkerNode extends CommonExecutableRuleNodeFactoryStrategy<DataMappingWorkerNode.Config> {
 
     public static Converter converter = FastBeanCopier.DEFAULT_CONVERT;
 
     @Override
-    public Config newConfig() {
+    public Config newConfigInstance() {
         return new Config();
     }
 

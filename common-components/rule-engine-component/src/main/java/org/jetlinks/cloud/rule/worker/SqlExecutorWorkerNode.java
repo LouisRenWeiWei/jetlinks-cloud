@@ -9,7 +9,7 @@ import org.hswebframework.web.datasource.DataSourceHolder;
 import org.jetlinks.rule.engine.api.RuleData;
 import org.jetlinks.rule.engine.api.executor.ExecutionContext;
 import org.jetlinks.rule.engine.api.model.NodeType;
-import org.jetlinks.rule.engine.executor.AbstractExecutableRuleNodeFactoryStrategy;
+import org.jetlinks.rule.engine.executor.CommonExecutableRuleNodeFactoryStrategy;
 import org.jetlinks.rule.engine.executor.SkipNextValue;
 import org.jetlinks.rule.engine.executor.supports.RuleNodeConfig;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 @Component
-public class SqlExecutorWorkerNode extends AbstractExecutableRuleNodeFactoryStrategy<SqlExecutorWorkerNode.Config> {
+public class SqlExecutorWorkerNode extends CommonExecutableRuleNodeFactoryStrategy<SqlExecutorWorkerNode.Config> {
 
     @Autowired
     private SqlExecutor sqlExecutor;
@@ -33,7 +33,7 @@ public class SqlExecutorWorkerNode extends AbstractExecutableRuleNodeFactoryStra
     private TransactionTemplate transactionTemplate;
 
     @Override
-    public Config newConfig() {
+    public Config newConfigInstance() {
         return new Config();
     }
 

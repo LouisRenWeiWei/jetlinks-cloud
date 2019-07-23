@@ -9,7 +9,7 @@ import org.jetlinks.rule.engine.api.events.RuleEvent;
 import org.jetlinks.rule.engine.api.executor.ExecutableRuleNode;
 import org.jetlinks.rule.engine.api.executor.ExecutionContext;
 import org.jetlinks.rule.engine.api.model.NodeType;
-import org.jetlinks.rule.engine.executor.AbstractExecutableRuleNodeFactoryStrategy;
+import org.jetlinks.rule.engine.executor.CommonExecutableRuleNodeFactoryStrategy;
 import org.jetlinks.rule.engine.executor.supports.RuleNodeConfig;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,7 +43,7 @@ import java.util.function.Function;
 @EnableBinding
 @ConditionalOnClass(BindingService.class)
 @Slf4j
-public class CloudStreamWorkerNode extends AbstractExecutableRuleNodeFactoryStrategy<CloudStreamWorkerNode.Config> {
+public class CloudStreamWorkerNode extends CommonExecutableRuleNodeFactoryStrategy<CloudStreamWorkerNode.Config> {
 
     @Autowired
     private BindingService bindingService;
@@ -57,7 +57,7 @@ public class CloudStreamWorkerNode extends AbstractExecutableRuleNodeFactoryStra
     private AbstractBindingTargetFactory<? extends MessageChannel> bindingTargetFactory;
 
     @Override
-    public Config newConfig() {
+    public Config newConfigInstance() {
         return new Config();
     }
 

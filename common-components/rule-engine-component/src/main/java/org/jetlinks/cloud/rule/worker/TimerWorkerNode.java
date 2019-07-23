@@ -16,7 +16,7 @@ import org.jetlinks.rule.engine.api.executor.ExecutableRuleNode;
 import org.jetlinks.rule.engine.api.executor.ExecutionContext;
 import org.jetlinks.rule.engine.api.executor.RuleNodeConfiguration;
 import org.jetlinks.rule.engine.api.model.NodeType;
-import org.jetlinks.rule.engine.executor.AbstractExecutableRuleNodeFactoryStrategy;
+import org.jetlinks.rule.engine.executor.CommonExecutableRuleNodeFactoryStrategy;
 import org.jetlinks.rule.engine.executor.supports.RuleNodeConfig;
 import org.redisson.api.CronSchedule;
 import org.redisson.executor.CronExpression;
@@ -34,10 +34,10 @@ import java.util.function.Function;
 
 @Component
 @Slf4j
-public class TimerWorkerNode extends AbstractExecutableRuleNodeFactoryStrategy<TimerWorkerNode.Config> {
+public class TimerWorkerNode extends CommonExecutableRuleNodeFactoryStrategy<TimerWorkerNode.Config> {
 
     @Override
-    public Config newConfig() {
+    public Config newConfigInstance() {
         return new Config();
     }
 

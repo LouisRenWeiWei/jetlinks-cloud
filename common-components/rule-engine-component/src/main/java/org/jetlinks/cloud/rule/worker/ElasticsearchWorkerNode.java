@@ -18,7 +18,7 @@ import org.hswebframework.web.id.IDGenerator;
 import org.jetlinks.rule.engine.api.RuleData;
 import org.jetlinks.rule.engine.api.executor.ExecutionContext;
 import org.jetlinks.rule.engine.api.model.NodeType;
-import org.jetlinks.rule.engine.executor.AbstractExecutableRuleNodeFactoryStrategy;
+import org.jetlinks.rule.engine.executor.CommonExecutableRuleNodeFactoryStrategy;
 import org.jetlinks.rule.engine.executor.supports.RuleNodeConfig;
 import org.springframework.boot.autoconfigure.elasticsearch.jest.JestProperties;
 import org.springframework.stereotype.Component;
@@ -40,10 +40,10 @@ import java.util.function.Function;
 
 @Component
 @Slf4j
-public class ElasticsearchWorkerNode extends AbstractExecutableRuleNodeFactoryStrategy<ElasticsearchWorkerNode.Config> {
+public class ElasticsearchWorkerNode extends CommonExecutableRuleNodeFactoryStrategy<ElasticsearchWorkerNode.Config> {
 
     @Override
-    public Config newConfig() {
+    public Config newConfigInstance() {
         return new Config();
     }
 

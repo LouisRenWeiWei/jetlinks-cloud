@@ -11,7 +11,7 @@ import org.hswebframework.expands.script.engine.DynamicScriptEngineFactory;
 import org.jetlinks.rule.engine.api.RuleData;
 import org.jetlinks.rule.engine.api.executor.ExecutionContext;
 import org.jetlinks.rule.engine.api.model.NodeType;
-import org.jetlinks.rule.engine.executor.AbstractExecutableRuleNodeFactoryStrategy;
+import org.jetlinks.rule.engine.executor.CommonExecutableRuleNodeFactoryStrategy;
 import org.jetlinks.rule.engine.executor.SkipNextValue;
 import org.jetlinks.rule.engine.executor.supports.RuleNodeConfig;
 import org.springframework.stereotype.Component;
@@ -24,10 +24,10 @@ import java.util.function.Function;
 
 @Component
 @Slf4j
-public class ScriptWorkerNode extends AbstractExecutableRuleNodeFactoryStrategy<ScriptWorkerNode.Config> {
+public class ScriptWorkerNode extends CommonExecutableRuleNodeFactoryStrategy<ScriptWorkerNode.Config> {
 
     @Override
-    public ScriptWorkerNode.Config newConfig() {
+    public ScriptWorkerNode.Config newConfigInstance() {
         return new Config();
     }
 
