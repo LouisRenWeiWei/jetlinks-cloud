@@ -208,6 +208,7 @@ public class CloudStreamWorkerNode extends CommonExecutableRuleNodeFactoryStrate
 
                         });
             }
+            context.fireEvent(RuleEvent.NODE_STARTED,RuleData.create(config));
         };
     }
 
