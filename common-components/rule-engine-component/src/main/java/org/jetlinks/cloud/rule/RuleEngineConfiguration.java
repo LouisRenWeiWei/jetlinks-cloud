@@ -216,13 +216,11 @@ public class RuleEngineConfiguration {
     @Bean(initMethod = "start")
     public RuleEngineWorker ruleEngineWorker(ClusterManager clusterManager,
                                              RuleEngineModelParser modelParser,
-                                             RuleRepository ruleRepository,
                                              ConditionEvaluator conditionEvaluator,
                                              ApplicationEventPublisher eventPublisher,
                                              ExecutableRuleNodeFactory ruleNodeFactory) {
         RuleEngineWorker worker = new RuleEngineWorker();
         worker.setClusterManager(clusterManager);
-        worker.setRuleRepository(ruleRepository);
         worker.setModelParser(modelParser);
         worker.setNodeFactory(ruleNodeFactory);
         worker.setConditionEvaluator(conditionEvaluator);
